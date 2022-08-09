@@ -1,3 +1,4 @@
+from torch.utils.data import Dataset
 from torchvision import transforms
 
 
@@ -39,3 +40,28 @@ def get_transforms(mean, std, size, setting):
         )
     else:
         raise ValueError(f"Unknown transformation setting {setting!r}")
+
+
+class TransformedPairDataset(Dataset):
+    """Create two augmentations based on one sample from the original dataset.
+
+    This creates a torch dataset that will take one sample from the
+    original `dataset` and apply the `transform` to it twice.  In the
+    process it discards the label information, but this might be subject to change.
+
+    """
+
+    def __init__(self, dataset, transform):
+        self.dataset = dataset
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, i):
+        item, _label = self.dataset[i]
+
+        item1 = self.transform(item)
+        item2 = self.transform(item)
+
+        return item1, item2
