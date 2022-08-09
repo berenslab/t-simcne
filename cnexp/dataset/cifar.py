@@ -1,9 +1,8 @@
 from .base import DatasetBase
-from ..imagedistortions import get_transforms
+from ..imagedistortions import TransformedPairDataset, get_transforms
 
 import contextlib
 import torch
-from torch.utils.data import Dataset
 from torchvision import datasets as tvdatasets
 
 
@@ -14,7 +13,13 @@ def load_cifar10(download=True, **kwargs):
 
     transform = get_transforms(mean, std, size=(32, 32), setting="contrastive")
 
-    return tvdatasets.CIFAR10(transform=transform, download=download, **kwargs)
+    dataset = tvdatasets.CIFAR100(
+        download=download,
+        **kwargs,
+    )
+
+    # need to make a dataset that returns two transforms of an image
+    return TransformedPairDataset(dataset, transform)
 
 
 def load_cifar100(download=True, **kwargs):
@@ -23,9 +28,13 @@ def load_cifar100(download=True, **kwargs):
 
     transform = get_transforms(mean, std, size=(32, 32), setting="contrastive")
 
-    # need to make a dataset that returns two transforms of an image
+    dataset = tvdatasets.CIFAR100(
+        download=download,
+        **kwargs,
+    )
 
-    return tvdatasets.CIFAR100(transform=transform, download=download, **kwargs)
+    # need to make a dataset that returns two transforms of an image
+    return TransformedPairDataset(dataset, transform)
 
 
 class CIFAR10(DatasetBase):
