@@ -1,5 +1,5 @@
 import abc
-import shutil
+import os
 
 import numpy as np
 
@@ -94,8 +94,16 @@ class ProjectBase(abc.ABC):
         The mode for opening the file.  Will be passed onto
         `NamedTemporaryFile` as is for opening."""
 
-        with NamedTemporaryFile(openmode) as f:
-            function(f, data)
+        fname = Path(fname)
+        with NamedTemporaryFile(
+            openmode, dir=fname.parent, suffix=fname.suffix
+        ) as tempf:
+            function(tempf, data)
 
-            tmpname = "{}.{}".format(f.name, Path(fname).name)
-            shutil.move(tmpname, fname)
+            # assuming that after the file has been successfully saved
+            # with the supplied function, we can safely rename the files.
+            fname.unlink(missing_ok=True)
+            # There would also be the option of
+            # Path(tempf.name).link_to(fname), but I don't quite get
+            # whether there is a subtle difference between the two.
+            os.link(tempf.name, fname)
