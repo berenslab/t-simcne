@@ -217,3 +217,5 @@ cython_debug/
 
 /experiments/
 out/
+/media/*.pdf
+/media/*.png
