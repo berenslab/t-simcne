@@ -1,6 +1,7 @@
 from .base import DatasetBase
 from ..imagedistortions import get_transforms
 
+import contextlib
 import torch
 from torch.utils.data import Dataset
 from torchvision import datasets as tvdatasets
@@ -16,7 +17,7 @@ def load_cifar10(download=True, **kwargs):
     return tvdatasets.CIFAR10(transform=transform, download=download, **kwargs)
 
 
-def load_cifar100(**kwargs):
+def load_cifar100(download=True, **kwargs):
     mean = (0.5071, 0.4867, 0.4408)
     std = (0.2675, 0.2565, 0.2761)
 
@@ -24,7 +25,7 @@ def load_cifar100(**kwargs):
 
     # need to make a dataset that returns two transforms of an image
 
-    return tvdatasets.CIFAR100(transform=transform, **kwargs)
+    return tvdatasets.CIFAR100(transform=transform, download=download, **kwargs)
 
 
 class CIFAR10(DatasetBase):
@@ -33,16 +34,20 @@ class CIFAR10(DatasetBase):
         self.kwargs = kwargs
 
     def compute(self):
-        self.cifar = load_cifar10(root=self.outdir / "cifar10", **self.kwargs)
+        with open(self.outdir / "stdout.txt", "w") as f:
+            with contextlib.redirect_stdout(f):
+                self.cifar = load_cifar10(root=self.outdir / "cifar10", **self.kwargs)
 
     def save(self):
-        torch.save(self.cifar, self.outdir / "dataset.pt")
+        self.save_lambda(
+            self.outdir / "dataset.pt",
+            self.cifar,
+            lambda file, data: torch.save(data, file),
+        )
 
 
-class CIFAR100(Dataset):
-    def __init__(self, path, random_state=None, **kwargs):
-        super().__init__(path, random_state=random_state)
-        self.kwargs = kwargs
-
+class CIFAR100(CIFAR10):
     def compute(self):
-        self.cifar = load_cifar100(root=self.outdir / "cifar100", **self.kwargs)
+        with open(self.outdir / "stdout.txt", "w") as f:
+            with contextlib.redirect_stdout(f):
+                self.cifar = load_cifar100(root=self.outdir / "cifar100", **self.kwargs)
