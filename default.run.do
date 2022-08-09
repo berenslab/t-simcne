@@ -16,20 +16,18 @@ if __name__ == "__main__":
     name = Path(sys.argv[2]).parent
     algo = dispatch.from_string(name)
 
-    filedeps = set(
-        [
-            mod.__file__
-            for mod in [inspect.getmodule(m) for m in algo.__class__.mro()]
-            if hasattr(mod, "__file__")
-        ]
-    )
+    filedeps = [
+        mod.__file__
+        for mod in [inspect.getmodule(m) for m in algo.__class__.mro()]
+        if hasattr(mod, "__file__")
+    ]
 
-    datadeps = algo.get_datadeps()
-    redo.redo_ifchange(list(filedeps) + datadeps)
+    deps = algo.get_deps()
+    redo.redo_ifchange(deps + list(set(filedeps)))
 
     t0 = time.time()
     algo()
     t1 = time.time()
 
     with open(sys.argv[3], "w") as f:
-        f.write(f"{t1 - t0:.5f}\n")
+        f.write(f"{t1 - t0:.3f}\n")
