@@ -8,7 +8,6 @@ def get_transforms(mean, std, size, setting):
     if setting == "contrastive":
         return transforms.Compose(
             [
-                # transforms.functional.to_pil_image,
                 # transforms.RandomRotation(30),
                 transforms.RandomResizedCrop(size=size, scale=(0.2, 1.0)),
                 transforms.RandomHorizontalFlip(),
@@ -16,14 +15,13 @@ def get_transforms(mean, std, size, setting):
                     [transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)], p=0.8
                 ),
                 transforms.RandomGrayscale(p=0.2),
-                transforms.functional.to_tensor,
+                transforms.ToTensor(),
                 normalize,
             ]
         )
     elif setting == "train_linear_classifier":
         return transforms.Compose(
             [
-                # transforms.functional.to_pil_image,
                 transforms.RandomResizedCrop(size=size, scale=(0.2, 1.0)),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
@@ -33,7 +31,6 @@ def get_transforms(mean, std, size, setting):
     elif setting == "test_linear_classifier":
         return transforms.Compose(
             [
-                transforms.functional.to_pil_image,
                 transforms.ToTensor(),
                 normalize,
             ]
