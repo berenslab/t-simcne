@@ -46,7 +46,8 @@ def resolve_class(name):
 
 
 def from_string(path):
+    path = Path(path)
     classid, kwargs = split_path(path)
 
     cls = resolve_class(classid)
-    return cls(**kwargs)
+    return cls(path, **kwargs)
