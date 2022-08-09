@@ -1,21 +1,25 @@
 from .base import DatasetBase
+from ..imagedistortions import get_transforms
+
 from torch.utils.data import Dataset
 from torchvision import datasets as tvdatasets
 
 
 def load_cifar10(download=True, **kwargs):
     # hardcode dataset mean and std
-    mean = 0
-    std = 1
-    # import imagedistortions and use that one here.
-    transform = None  #
+    mean = (0.4914, 0.4822, 0.4465)
+    std = (0.2023, 0.1994, 0.2010)
+
+    transform = get_transforms(mean, std, size=(32, 32), setting="contrastive")
 
     return tvdatasets.CIFAR10(transform=transform, download=download, **kwargs)
 
 
 def load_cifar100(**kwargs):
-    # import imagedistortions and use that one here.
-    transform = None  #
+    mean = (0.5071, 0.4867, 0.4408)
+    std = (0.2675, 0.2565, 0.2761)
+
+    transform = get_transforms(mean, std, size=(32, 32), setting="contrastive")
 
     return tvdatasets.CIFAR100(transform=transform, **kwargs)
 
