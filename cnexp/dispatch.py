@@ -41,6 +41,14 @@ def resolve_class(name):
         from .dataset.cifar import CIFAR100
 
         return CIFAR100
+    elif name == "model":
+        from .models.simclr_like import SimCLRModel
+
+        return SimCLRModel
+    elif name == "ftmodel":
+        from .models.simclr_like import FinetuneSimCLRModel
+
+        return FinetuneSimCLRModel
     else:
         raise ValueError(f"Unknown class identifier “{name}”")
 
