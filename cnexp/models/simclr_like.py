@@ -94,10 +94,23 @@ class FinetuneSimCLRModel(SimCLRModel):
         return supdeps + [self.indir / "model.pt"]
 
     def load(self):
-        self.model = torch.load(self.indir / "model.pt")["model"]
+        self.state_dict = torch.load(self.indir / "model.pt")
+        self.model = self.state_dict["model"]
 
     def compute(self):
         self.model = mutate_model(self.model, **self.kwargs)
+
+    def save(self):
+        # remove old values that might be present
+        self.state_dict.pop("model", None)
+        self.state_dict.pop("model_sd", None)
+
+        save_data = dict(
+            **self.state_dict,
+            model=self.model,
+            model_sd=self.model.state_dict(),
+        )
+        self.save_lambda_alt(self.outdir / "model.pt", save_data, torch.save)
 
 
 class ResNetFC(nn.Module):
