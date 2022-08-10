@@ -51,6 +51,14 @@ def resolve_class(name):
         from .models.simclr_like import FinetuneSimCLRModel
 
         return FinetuneSimCLRModel
+    elif name == "sgd":
+        from .optimizers import SGD
+
+        return SGD
+    elif name == "adam":
+        from .optimizers import Adam
+
+        return Adam
     else:
         raise ValueError(f"Unknown class identifier “{name}”")
 
