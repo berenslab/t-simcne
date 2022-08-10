@@ -1,10 +1,9 @@
 import abc
 import os
-
-import numpy as np
-
 from pathlib import Path
 from tempfile import NamedTemporaryFile
+
+import numpy as np
 
 
 class ProjectBase(abc.ABC):

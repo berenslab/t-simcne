@@ -10,7 +10,9 @@ def split_path(path, *, split_argpairs=":", split_argvals="="):
         try:
             key, val = p.split(split_argvals)
         except ValueError:
-            raise ValueError(f"malformed parameter “{p}” cannot be split in two")
+            raise ValueError(
+                f"malformed parameter “{p}” cannot be split in two"
+            )
 
         # try to convert to either an int or float, otherwise pass the
         # value on as is.
