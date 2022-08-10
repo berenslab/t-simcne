@@ -93,17 +93,55 @@ class ProjectBase(abc.ABC):
         mode : str
         The mode for opening the file.  Will be passed onto
         `NamedTemporaryFile` as is for opening."""
+        return save_lambda(fname, data, function, openmode)
 
-        fname = Path(fname)
-        with NamedTemporaryFile(
-            openmode, dir=fname.parent, suffix=fname.suffix
-        ) as tempf:
-            function(tempf, data)
+    @classmethod
+    def save_lambda_alt(cls, fname, data, function, openmode="wb"):
+        """Swap the file and data arguments for save_lambda.
 
-            # assuming that after the file has been successfully saved
-            # with the supplied function, we can safely rename the files.
-            fname.unlink(missing_ok=True)
-            # There would also be the option of
-            # Path(tempf.name).link_to(fname), but I don't quite get
-            # whether there is a subtle difference between the two.
-            os.link(tempf.name, fname)
+        For now I am only using this or torch.save, where the order is
+        the other way around.
+        """
+        return cls.save_lambda(
+            fname, data, lambda f, d: function(d, f), openmode=openmode
+        )
+
+
+def save_lambda(fname, data, function, openmode="wb"):
+    """Saves the file via the specified lambda function.
+
+    The rationale for this function is that if we write to the
+    files that we hardlinked to, `redo` will notice a change in
+    the source file and error out.  This way we write to a
+    tempfile and atomically move it to a location that we will
+    hardlink to.  This way we get a new inode that is not linked
+    to by the target that we want to create at a later point.
+
+    Parameters
+    ----------
+
+    fname : str or path-like
+    The name that the file will be written to in the end.
+    data
+    This will be passed to the parameter `function` and will
+    through this be written to the disk.
+    function : function or lambda
+    The function that will write to the opened file.  Use
+    `np.save` if you want to save a numpy array.
+    mode : str
+    The mode for opening the file.  Will be passed onto
+    `NamedTemporaryFile` as is for opening."""
+
+    fname = Path(fname)
+    with NamedTemporaryFile(
+        openmode, dir=fname.parent, suffix=fname.suffix
+    ) as tempf:
+        function(tempf, data)
+
+        # assuming that after the file has been successfully saved
+        # with the supplied function, we can safely rename the files.
+        fname.unlink(missing_ok=True)
+        # There would also be the option of
+        # Path(tempf.name).link_to(fname), but I don't quite get
+        # whether there is a subtle difference between the two.
+        os.link(tempf.name, fname)

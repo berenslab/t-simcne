@@ -85,9 +85,7 @@ class SimCLRModel(ProjectBase):
 
     def save(self):
         save_data = dict(model=self.model, model_sd=self.model.state_dict())
-        self.save_lambda(
-            self.outdir / "model.pt", save_data, lambda f, d: torch.save(d, f)
-        )
+        self.save_lambda_alt(self.outdir / "model.pt", save_data, torch.save)
 
 
 class FinetuneSimCLRModel(SimCLRModel):
