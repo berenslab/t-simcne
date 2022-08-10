@@ -59,6 +59,10 @@ def resolve_class(name):
         from .optimizers import Adam
 
         return Adam
+    elif name == "lrcos":
+        from .lrschedule import CosineAnnealing as CA
+
+        return CA
     else:
         raise ValueError(f"Unknown class identifier “{name}”")
 
