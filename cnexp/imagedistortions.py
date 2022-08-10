@@ -44,11 +44,28 @@ class TransformedPairDataset(Dataset):
 
     This creates a torch dataset that will take one sample from the
     original `dataset` and apply the `transform` to it twice.  In the
-    process it discards the label information, but this might be subject to change.
+    process it discards the label information, but this might be
+    subject to change.
+
+    Parameters
+    ----------
+    dataset : torch.utils.data.Dataset
+        A dataset returning a (data, label) pair.
+    transform : torchvision.transforms.*
+        Transformations that should be applied to the data point sampled from
+        the dataset.
+
+    Returns
+    -------
+    torch.utils.data.Dataset
+        a new torch dataset that will return a pair (transformed,
+        orig) where `transformed` is an augmented sample in the form
+        (data', data''). `orig` is the original sample and the
+        `label`.
 
     """
 
-    def __init__(self, dataset, transform):
+    def __init__(self, dataset: Dataset, transform):
         self.dataset = dataset
         self.transform = transform
 
@@ -56,9 +73,9 @@ class TransformedPairDataset(Dataset):
         return len(self.dataset)
 
     def __getitem__(self, i):
-        item, _label = self.dataset[i]
+        orig_item, label = self.dataset[i]
 
-        item1 = self.transform(item)
-        item2 = self.transform(item)
+        item1 = self.transform(orig_item)
+        item2 = self.transform(orig_item)
 
-        return item1, item2
+        return (item1, item2), (orig_item, label)
