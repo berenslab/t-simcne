@@ -1,11 +1,11 @@
-from .base import DatasetBase
-from ..imagedistortions import TransformedPairDataset, get_transforms
-
 import contextlib
 import inspect
 
 import torch
 from torchvision import datasets as tvdatasets
+
+from ..imagedistortions import TransformedPairDataset, get_transforms
+from .base import DatasetBase
 
 
 def load_cifar10(download=True, **kwargs):
@@ -51,7 +51,9 @@ class CIFAR10(DatasetBase):
     def compute(self):
         with open(self.outdir / "stdout.txt", "w") as f:
             with contextlib.redirect_stdout(f):
-                self.cifar = load_cifar10(root=self.outdir / "cifar10", **self.kwargs)
+                self.cifar = load_cifar10(
+                    root=self.outdir / "cifar10", **self.kwargs
+                )
 
     def save(self):
         self.save_lambda(
@@ -65,4 +67,6 @@ class CIFAR100(CIFAR10):
     def compute(self):
         with open(self.outdir / "stdout.txt", "w") as f:
             with contextlib.redirect_stdout(f):
-                self.cifar = load_cifar100(root=self.outdir / "cifar100", **self.kwargs)
+                self.cifar = load_cifar100(
+                    root=self.outdir / "cifar100", **self.kwargs
+                )
