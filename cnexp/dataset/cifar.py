@@ -2,6 +2,8 @@ from .base import DatasetBase
 from ..imagedistortions import TransformedPairDataset, get_transforms
 
 import contextlib
+import inspect
+
 import torch
 from torchvision import datasets as tvdatasets
 
@@ -13,7 +15,7 @@ def load_cifar10(download=True, **kwargs):
 
     transform = get_transforms(mean, std, size=(32, 32), setting="contrastive")
 
-    dataset = tvdatasets.CIFAR100(
+    dataset = tvdatasets.CIFAR10(
         download=download,
         **kwargs,
     )
@@ -41,6 +43,10 @@ class CIFAR10(DatasetBase):
     def __init__(self, path, random_state=None, **kwargs):
         super().__init__(path, random_state=random_state)
         self.kwargs = kwargs
+
+    def get_deps(self):
+        supdeps = super().get_deps()
+        return supdeps + [inspect.getfile(TransformedPairDataset)]
 
     def compute(self):
         with open(self.outdir / "stdout.txt", "w") as f:
