@@ -5,8 +5,9 @@ from ..base import ProjectBase
 
 
 class LossBase(ProjectBase):
-    def __init__(self, path, random_state=None, **kwargs):
+    def __init__(self, path, random_state=None, metric="euclidean", **kwargs):
         super().__init__(path, random_state=random_state)
+        self.metric = metric
         self.kwargs = kwargs
         # parameters are requires for saving as a state dict.  Not
         # sure how that could influence things down the line so I am
