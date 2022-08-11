@@ -12,8 +12,10 @@ class LossBase(ProjectBase):
         return []
 
     def load(self):
-        self.state_dict = torch.load(self.indir / "model.pt")
-        self.model = self.state_dict["model"]
+        if (self.indir / "model.pt").exists():
+            self.state_dict = torch.load(self.indir / "model.pt")
+        else:
+            self.state_dict = dict()
 
     def save(self):
         self.state_dict.pop("criterion", None)
