@@ -43,9 +43,8 @@ class TransformedPairDataset(Dataset):
     """Create two augmentations based on one sample from the original dataset.
 
     This creates a torch dataset that will take one sample from the
-    original `dataset` and apply the `transform` to it twice.  In the
-    process it discards the label information, but this might be
-    subject to change.
+    original `dataset` and apply the `transform` to it twice and
+    return the two resulting items instead.
 
     Parameters
     ----------
@@ -59,9 +58,8 @@ class TransformedPairDataset(Dataset):
     -------
     torch.utils.data.Dataset
         a new torch dataset that will return a pair (transformed,
-        orig) where `transformed` is an augmented sample in the form
-        (data', data''). `orig` is the original sample and the
-        `label`.
+        label) where `transformed` is an augmented sample in the form
+        (data', data'').  `label` corresponds to the original label.
 
     """
 
@@ -78,4 +76,4 @@ class TransformedPairDataset(Dataset):
         item1 = self.transform(orig_item)
         item2 = self.transform(orig_item)
 
-        return (item1, item2), (orig_item, label)
+        return (item1, item2), label
