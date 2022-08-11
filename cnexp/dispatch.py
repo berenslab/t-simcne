@@ -63,6 +63,10 @@ def resolve_class(name):
         from .lrschedule import CosineAnnealing as CA
 
         return CA
+    elif name == "infonce":
+        from .losses.infonce import InfoNCELoss
+
+        return InfoNCELoss
     else:
         raise ValueError(f"Unknown class identifier “{name}”")
 
