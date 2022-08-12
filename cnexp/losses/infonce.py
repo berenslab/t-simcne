@@ -48,7 +48,8 @@ class InfoNCEEuclidean(nn.Module):
         super().__init__()
         self.kwargs = kwargs
 
-    def forward(self, features):
+    def forward(self, features, backbone_features=None):
+        # backbone_features are unused
         batch_size = features.size(0) // 2
 
         a = features[:batch_size]
