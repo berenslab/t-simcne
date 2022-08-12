@@ -54,9 +54,9 @@ class InfoNCEEuclidean(nn.Module):
         a = features[:batch_size]
         b = features[batch_size:]
 
-        sim_aa = 1 / (1 + torch.norm(a[:, None] - a, dim=2))
-        sim_bb = 1 / (1 + torch.norm(b[:, None] - b, dim=2))
-        sim_ab = 1 / (1 + torch.norm(a[:, None] - b, dim=2))
+        sim_aa = 1 / (1 + torch.cdist(a, a))
+        sim_bb = 1 / (1 + torch.cdist(b, b))
+        sim_ab = 1 / (1 + torch.cdist(a, b))
 
         tempered_alignment = sim_ab.trace() / batch_size
 
