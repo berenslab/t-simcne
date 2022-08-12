@@ -32,5 +32,5 @@ class GenericDataLoader(DatasetBase):
 
     def save(self):
         self.state_dict.pop("dataloader", None)
-        save_data = dict(**self.state_dict, dataloder=self.dataloader)
+        save_data = dict(**self.state_dict, dataloader=self.dataloader)
         self.save_lambda_alt(self.outdir / "dataset.pt", save_data, torch.save)
