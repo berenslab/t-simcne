@@ -60,9 +60,9 @@ class InfoNCEEuclidean(nn.Module):
 
         tempered_alignment = sim_ab.trace() / batch_size
 
-        logsumexp_1 = torch.cat((sim_ab, sim_bb), dim=-1).log().sum(-1).mean()
+        logsumexp_1 = torch.cat((sim_ab, sim_bb), dim=-1).sum(-1).log().mean()
         logsumexp_2 = (
-            torch.cat((sim_aa, sim_ab.T), dim=-1).log().sum(-1).mean()
+            torch.cat((sim_aa, sim_ab.T), dim=-1).sum(-1).log().mean()
         )
 
         raw_uniformity = logsumexp_1 + logsumexp_2
