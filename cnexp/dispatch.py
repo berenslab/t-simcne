@@ -43,6 +43,10 @@ def resolve_class(name):
         from .dataset.cifar import CIFAR100
 
         return CIFAR100
+    elif name == "dl":
+        from .dataset.dataloader import GenericDataLoader as GDL
+
+        return GDL
     elif name == "model":
         from .models.simclr_like import SimCLRModel
 
