@@ -12,7 +12,7 @@ def make_model(**kwargs):
 def mutate_model(
     model: torch.nn.Module,
     change: str = "nothing",
-    freeze: bool = None,
+    freeze: str | bool | None = None,
     proj_head="mlp",
     out_dim: int = 2,
     hidden_dim=None,
@@ -29,7 +29,18 @@ def mutate_model(
     as is.
     """
     if freeze is not None:
-        model.requires_grad_(freeze)
+        if freeze == "backbone":
+            model.backbone.requires_grad_(False)
+            model.projectoin_head.requires_grad_(True)
+        # elif freeze == "thaw_llin":
+        #     # unfreeze the last linear layer.  This shouldn't really
+        #     # be necessary, since introducing the new linear layer
+        #     # with the `change='lastlin'` parameter will already
+        #     # require a gradient.
+        #     model.requires_grad_(False)
+        #     model.projection_head.layers[-1].requires_grad_(True)
+        else:
+            model.requires_grad_(not freeze)
 
     if change == "lastlin":
         # swap out the last linear layer of the projection head
