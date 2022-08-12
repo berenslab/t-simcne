@@ -2,12 +2,9 @@ from ..base import ProjectBase
 
 
 class DatasetBase(ProjectBase):
-    def __init__(
-        self,
-        path,
-        random_state=None,
-    ):
+    def __init__(self, path, random_state=None, **kwargs):
         super().__init__(path, random_state=random_state)
+        self.kwargs = kwargs
 
     def get_deps(self):
         return []
@@ -20,5 +17,9 @@ class DatasetBase(ProjectBase):
         pass
 
     def save(self):
+        import torch
+
         # mark the top-level for the generated data.
         (self.path / "data.root").touch(exist_ok=True)
+        save_data = dict(dataset=self.dataset)
+        self.save_lambda_alt(self.outdir / "dataset.pt", save_data, torch.save)

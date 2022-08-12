@@ -40,10 +40,6 @@ def load_cifar100(download=True, **kwargs):
 
 
 class CIFAR10(DatasetBase):
-    def __init__(self, path, random_state=None, **kwargs):
-        super().__init__(path, random_state=random_state)
-        self.kwargs = kwargs
-
     def get_deps(self):
         supdeps = super().get_deps()
         return supdeps + [inspect.getfile(TransformedPairDataset)]
@@ -51,19 +47,15 @@ class CIFAR10(DatasetBase):
     def compute(self):
         with open(self.outdir / "stdout.txt", "w") as f:
             with contextlib.redirect_stdout(f):
-                self.cifar = load_cifar10(
+                self.dataset = load_cifar10(
                     root=self.outdir / "cifar10", **self.kwargs
                 )
-
-    def save(self):
-        save_data = dict(dataset=self.cifar)
-        self.save_lambda_alt(self.outdir / "dataset.pt", save_data, torch.save)
 
 
 class CIFAR100(CIFAR10):
     def compute(self):
         with open(self.outdir / "stdout.txt", "w") as f:
             with contextlib.redirect_stdout(f):
-                self.cifar = load_cifar100(
+                self.dataset = load_cifar100(
                     root=self.outdir / "cifar100", **self.kwargs
                 )
