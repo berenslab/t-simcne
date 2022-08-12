@@ -71,6 +71,10 @@ def resolve_class(name):
         from .losses.infonce import InfoNCELoss
 
         return InfoNCELoss
+    elif name == "train":
+        from .train import TrainBase
+
+        return TrainBase
     else:
         raise ValueError(f"Unknown class identifier “{name}”")
 
