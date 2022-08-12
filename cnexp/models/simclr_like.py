@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from ..base import ProjectBase
-
+from typing import Union
 
 def make_model(**kwargs):
     return ResNetFC(**kwargs)
@@ -12,7 +12,7 @@ def make_model(**kwargs):
 def mutate_model(
     model: torch.nn.Module,
     change: str = "nothing",
-    freeze: str | bool | None = None,
+    freeze: Union[str, bool, None] = None,
     proj_head="mlp",
     out_dim: int = 2,
     hidden_dim=None,
