@@ -56,9 +56,8 @@ class CIFAR10(DatasetBase):
                 )
 
     def save(self):
-        self.save_lambda_alt(
-            self.outdir / "dataset.pt", self.cifar, torch.save
-        )
+        save_data = dict(dataset=self.cifar)
+        self.save_lambda_alt(self.outdir / "dataset.pt", save_data, torch.save)
 
 
 class CIFAR100(CIFAR10):
