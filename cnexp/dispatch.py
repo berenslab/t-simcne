@@ -75,6 +75,10 @@ def resolve_class(name):
         from .losses.infonce import InfoNCELoss
 
         return InfoNCELoss
+    elif name == "ce_loss":
+        from .losses.supervised import CELoss
+
+        return CELoss
     elif name == "train":
         from .train import TrainBase
 
