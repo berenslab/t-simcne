@@ -83,6 +83,10 @@ def resolve_class(name):
         from .train import TrainBase
 
         return TrainBase
+    elif name == "suptrain":
+        from .suptrain import SupervisedTraining as ST
+
+        return ST
     else:
         raise ValueError(f"Unknown class identifier “{name}”")
 
