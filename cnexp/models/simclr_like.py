@@ -57,6 +57,7 @@ class ResNetFC(nn.Module):
                 f"  Available backbones are {model_dict.keys()}"
             )
         self.backbone_dim = backbone_dim
+        self.out_dim = out_dim
         self.backbone = model_func(in_channel=in_channel)
 
         self.projection_head = make_projection_head(
@@ -77,6 +78,11 @@ class FCNetwork(nn.Module):
 
     def __init__(self, in_dim=784, feat_dim=128, hidden_dim=100):
         super(FCNetwork, self).__init__()
+
+        self.in_dim = in_dim
+        self.feat_dim = feat_dim
+        self.hidden_dim = hidden_dim
+
         self.flatten = nn.Flatten()
         self.layers = nn.Sequential(
             nn.Linear(in_dim, hidden_dim),
