@@ -222,8 +222,7 @@ class TrainBase(ProjectBase):
 
     def load(self):
         self.dataset_dict = torch.load(self.indir / "dataset.pt")
-        self.dataset = self.dataset_dict["dataset"]
-        self.dataloader = self.dataset_dict["dataloader"]
+        self.dataloader = self.dataset_dict["train_contrastive_loader"]
 
         self.state_dict = torch.load(self.indir / "model.pt")
         sd = self.state_dict

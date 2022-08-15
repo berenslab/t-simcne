@@ -21,5 +21,5 @@ class DatasetBase(ProjectBase):
 
         # mark the top-level for the generated data.
         (self.path / "data.root").touch(exist_ok=True)
-        save_data = dict(dataset=self.dataset)
+        save_data = self.data_sd
         self.save_lambda_alt(self.outdir / "dataset.pt", save_data, torch.save)
