@@ -5,14 +5,20 @@ from .base import DatasetBase
 
 
 def make_dataloader(
-    dataset, batch_size=1024, shuffle=True, num_workers=8, **kwargs
-):
+    dataset, seed=None, batch_size=1024, shuffle=True, num_workers=8, **kwargs
+) -> DataLoader:
+    if seed is not None:
+        gen = torch.Generator()
+        gen = gen.manual_seed(seed)
+    else:
+        gen = None
     dataloader = DataLoader(
         dataset,
         batch_size=batch_size,
         shuffle=shuffle,
         num_workers=num_workers,
-        **kwargs
+        generator=gen,
+        **kwargs,
     )
     return dataloader
 
