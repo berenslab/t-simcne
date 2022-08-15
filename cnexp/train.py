@@ -179,6 +179,7 @@ def train_one_epoch(
                 )
             td["t_loss"][i] = t()
             with elapsed_time() as t:
+                opt.zero_grad()
                 loss.backward()
             td["t_backward"][i] = t()
             with elapsed_time() as t:
