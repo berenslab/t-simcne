@@ -136,7 +136,14 @@ def train_one_epoch(
     # print_batch_freq=100000,
     **kwargs,
 ):
-    model.train()
+    if kwargs.get("readout_mode", False):
+        # if we do linear readout, then the projection head is the
+        # only part that is supposed to be trained.
+        model.backbone.eval()
+        model.projection_head.train()
+    else:
+        model.train()
+
     losses = torch.empty(len(dataloader))
     # time dictionary
     td = {
@@ -163,7 +170,13 @@ def train_one_epoch(
             td["t_forward"][i] = t()
 
             with elapsed_time() as t:
-                loss = criterion(features, backbone_features=backbone_features)
+                # `backbone_features` and `labels` are usually
+                # discarded in the loss.
+                loss = criterion(
+                    features,
+                    backbone_features=backbone_features,
+                    labels=orig_label,
+                )
             td["t_loss"][i] = t()
             with elapsed_time() as t:
                 loss.backward()
