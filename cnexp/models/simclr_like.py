@@ -10,14 +10,9 @@ def make_model(**kwargs):
 
 
 def make_projection_head(name="mlp", in_dim=512, hidden_dim=1024, out_dim=128):
-    if name == "mlp":
-        projection_head = FCNetwork(
-            in_dim=in_dim, feat_dim=out_dim, hidden_dim=hidden_dim
-        )
-    else:
-        raise ValueError(f"Unknown projection head {name = !r}")
-
-    return projection_head
+    return FCNetwork(
+        in_dim=in_dim, feat_dim=out_dim, hidden_dim=hidden_dim, arch=name
+    )
 
 
 class SimCLRModel(ProjectBase):
@@ -76,7 +71,7 @@ class ResNetFC(nn.Module):
 class FCNetwork(nn.Module):
     "Fully-connected network"
 
-    def __init__(self, in_dim=784, feat_dim=128, hidden_dim=100):
+    def __init__(self, in_dim=784, feat_dim=128, hidden_dim=100, arch="mlp"):
         super(FCNetwork, self).__init__()
 
         self.in_dim = in_dim
@@ -84,11 +79,16 @@ class FCNetwork(nn.Module):
         self.hidden_dim = hidden_dim
 
         self.flatten = nn.Flatten()
-        self.layers = nn.Sequential(
-            nn.Linear(in_dim, hidden_dim),
-            nn.ReLU(inplace=True),
-            nn.Linear(hidden_dim, feat_dim),
-        )
+        if arch == "mlp":
+            self.layers = nn.Sequential(
+                nn.Linear(in_dim, hidden_dim),
+                nn.ReLU(inplace=True),
+                nn.Linear(hidden_dim, feat_dim),
+            )
+        elif arch == "linear":
+            self.layers = nn.Sequential(nn.Linear(in_dim, feat_dim))
+        else:
+            raise ValueError(f"Unknown network {arch = !r}")
 
     def forward(self, x):
         x = self.flatten(x)
