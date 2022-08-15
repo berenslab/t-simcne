@@ -103,6 +103,7 @@ def train(
         if (epoch + 1) % print_epoch_freq == 0:
             batch_time_secs = batch_ret["t_batch"].sum() / 1e9
             eprint(
+                f"({epoch + 1: 3d}/{n_epochs: 3d}) "
                 f"time: {batch_time_secs:.2f} \t"
                 f"loss: {losses[epoch, :].mean(): .3f}, \t"
                 f"lr: {lr:.4f}"
@@ -132,8 +133,7 @@ def train_one_epoch(
     criterion: nn.Module,
     opt: Optimizer,
     device: torch.device,
-    print_batch_freq: int = 10,
-    # print_batch_freq=100000,
+    print_batch_freq: int = 100000,
     **kwargs,
 ):
     if kwargs.get("readout_mode", False):
@@ -191,7 +191,7 @@ def train_one_epoch(
         td["t_batch"][i] = t_batch()
 
         if (i + 1) % print_batch_freq == 0:
-            eprint(f"batch {i + 1:5d}/{len(dataloader)}")
+            eprint(f"batch {i + 1:5d}/{len(dataloader)}, loss {loss:.4f}")
 
     return dict(batch_losses=losses, **td)
 
@@ -212,7 +212,7 @@ def get_n_epochs(n_epochs, lrsched):
 class TrainBase(ProjectBase):
     def __init__(self, path, random_state=None, **kwargs):
         super().__init__(path, random_state=random_state)
-        self.kwargs = kwargs
+        self.kwargs: dict = kwargs
 
         self.memdict_keys = [
             "active_bytes.all.peak",
