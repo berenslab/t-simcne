@@ -9,6 +9,7 @@ from torch import nn
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import _LRScheduler
 from torch.utils.data import DataLoader
+from tqdm import tqdm, trange
 
 from .base import ProjectBase
 
@@ -53,8 +54,7 @@ def train(
     lrsched: _LRScheduler,
     n_epochs: int = None,
     device: torch.device = "cuda:0",
-    print_epoch_freq: int = 1,
-    # print_epoch_freq=1000,
+    print_epoch_freq: int = 2000,
     **kwargs,
 ):
     n_epochs = get_n_epochs(n_epochs, lrsched)
@@ -85,7 +85,8 @@ def train(
         "reserved_bytes.all.allocated": [],
     }
 
-    for epoch in range(n_epochs):
+    epochs_iter = trange(n_epochs, desc="train", unit="epoch", ncols=80)
+    for epoch in epochs_iter:
         batch_ret = train_one_epoch(
             dataloader, model, criterion, opt, device=device, **kwargs
         )
@@ -100,6 +101,9 @@ def train(
             info = torch.cuda.memory_stats(device)
             [memdict[k].append(info[k]) for k in memdict.keys()]
 
+        epochs_iter.set_postfix(
+            dict(lr=lr, loss=losses[epoch, :].mean().item()), refresh=False
+        )
         if (epoch + 1) % print_epoch_freq == 0:
             batch_time_secs = batch_ret["t_batch"].sum() / 1e9
             eprint(
@@ -158,7 +162,13 @@ def train_one_epoch(
         ]
     }
 
-    for i, batch in enumerate(dataloader):
+    for i, batch in tqdm(
+        enumerate(dataloader),
+        total=len(dataloader),
+        unit="batch",
+        ncols=80,
+        leave=False,
+    ):
         with elapsed_time() as t_batch:
             with elapsed_time() as t:
                 (data1, data2), orig_label = batch
