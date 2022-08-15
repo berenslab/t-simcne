@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 # -*- mode: python-mode -*-
 
-import sys
 import inspect
+import sys
 import time
-
 from pathlib import Path
 
-from cnexp import redo, dispatch
+from cnexp import dispatch, redo
 
 if __name__ == "__main__":
     # redo will pass the target name as the second arg.  The directory

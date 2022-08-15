@@ -54,6 +54,8 @@ class InfoNCEEuclidean(nn.Module):
         a = features[:batch_size]
         b = features[batch_size:]
 
+        # cdist does not necessarily return 0 for the self-distance,
+        # but this is not accounted for here.  This should be fine™
         sim_aa = 1 / (1 + torch.cdist(a, a))
         sim_bb = 1 / (1 + torch.cdist(b, b))
         sim_ab = 1 / (1 + torch.cdist(a, b))
