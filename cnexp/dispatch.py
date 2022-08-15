@@ -52,9 +52,13 @@ def resolve_class(name):
 
         return SimCLRModel
     elif name == "ftmodel":
-        from .models.simclr_like import FinetuneSimCLRModel
+        from .models.mutate_model import FinetuneSimCLRModel
 
         return FinetuneSimCLRModel
+    elif name == "readout":
+        from .models.mutate_model import ReadoutModel
+
+        return ReadoutModel
     elif name == "sgd":
         from .optimizers import SGD
 
