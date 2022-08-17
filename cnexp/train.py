@@ -120,17 +120,7 @@ def train(
     losses_df = pd.DataFrame(losses.numpy(), index=ix, columns=cols)
     mem_df = pd.DataFrame(memdict, index=ix)
 
-    # do something like the following for the time data:
-    # In [239]: m, n, r = a.shape
-    # In [240]: out_arr = np.column_stack((np.repeat(np.arange(m), n), a.reshape(m * n, -1)))
-    # In [241]: out_arr.shape
-    # Out[241]: (18, 50)
-    # In [242]: out_df = pd.DataFrame(out_arr)
-
-    # from https://stackoverflow.com/questions/36235180/
-    # efficiently-creating-a-pandas-dataframe-from-a-numpy-3d-array
-
-    return dict(losses=losses_df, lrs=lrs, memory=mem_df, **timedict)
+    return dict(losses=losses_df, lrs=lrs, memory=mem_df, times=timedict)
 
 
 def train_one_epoch(
@@ -234,14 +224,6 @@ class TrainBase(ProjectBase):
             "reserved_bytes.all.peak",
             "reserved_bytes.all.allocated",
         ]
-        self.time_keys = [
-            "t_dataload",
-            "t_forward",
-            "t_loss",
-            "t_backward",
-            "t_optstep",
-            "t_batch",
-        ]
 
     def get_deps(self):
         return [
@@ -294,7 +276,8 @@ class TrainBase(ProjectBase):
             self.outdir / "learning_rates.npy", self.learning_rates, np.save
         )
 
-        for key in self.time_keys:
-            self.save_lambda(
-                self.outdir / f"{key}.npy", self.retdict[key], np.save
-            )
+        self.save_lambda(
+            self.outdir / "times.npz",
+            self.retdict["times"],
+            lambda f, d: np.savez(f, **d),
+        )
