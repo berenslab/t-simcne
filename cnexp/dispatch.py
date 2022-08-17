@@ -87,6 +87,14 @@ def resolve_class(name):
         from .suptrain import SupervisedTraining as ST
 
         return ST
+    elif name == "lin":
+        from .eval.linear import LinearAcc
+
+        return LinearAcc
+    elif name == "knn":
+        from .eval.knn import KNNAcc
+
+        return KNNAcc
     else:
         raise ValueError(f"Unknown class identifier “{name}”")
 
