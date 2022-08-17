@@ -50,9 +50,6 @@ class CosineAnnealingSchedule(_LRScheduler):
         self.warmup_epochs = warmup_epochs
         self.warmup_lr = warmup_lr
 
-        self.cur_lr = -1
-        self.cur_epoch = 0
-
         # increase the number by one since we initialize the optimizer
         # before the first step (so the lr is set to 0 in the case of
         # warmups).  So we start counting at 1, basically.
@@ -64,6 +61,10 @@ class CosineAnnealingSchedule(_LRScheduler):
             1 + np.cos(np.pi * np.arange(decay_epochs) / decay_epochs)
         )
         self.lr_schedule = np.hstack((warmup_schedule, decay_schedule))
+
+        self._last_lr = self.lr_schedule[0]
+        self.cur_epoch = 0
+
         self.init_opt()
 
     def init_opt(self):
@@ -75,10 +76,10 @@ class CosineAnnealingSchedule(_LRScheduler):
 
     def step(self):
         for param_group in self.opt.param_groups:
-            lr = param_group["lr"] = self.lr_schedule[self.cur_epoch]
+            lr = param_group["lr"] = self.get_lr()
 
         self.cur_epoch += 1
-        self.cur_lr = lr
+        self._last_lr = lr
         return lr
 
     def set_epoch(self, epoch):

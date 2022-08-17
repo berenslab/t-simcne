@@ -76,7 +76,7 @@ def train(
     }
 
     lrs = np.empty(n_epochs + 1)
-    lrs[0] = opt.defaults["lr"]
+    lrs[0] = lrsched.get_last_lr()
 
     memdict = {
         "active_bytes.all.peak": [],
