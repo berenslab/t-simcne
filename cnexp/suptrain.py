@@ -29,8 +29,15 @@ def eval_model(model, /, dataloader, device="cuda:0") -> float:
 
 
 class SupervisedTraining(TrainBase):
-    def __init__(self, path, **kwargs):
-        super().__init__(path, **kwargs)
+    def __init__(
+        self, path, model_save_freq=-1, embedding_save_freq=-1, **kwargs
+    ):
+        super().__init__(
+            path,
+            model_save_freq=model_save_freq,
+            embedding_save_freq=embedding_save_freq,
+            **kwargs,
+        )
         # this will set up model eval/train modes correctly in `train`.
         self.kwargs.setdefault("readout_mode", True)
 

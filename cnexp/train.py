@@ -1,3 +1,5 @@
+import inspect
+import os
 import sys
 import time
 from contextlib import contextmanager
@@ -12,6 +14,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm, trange
 
 from .base import ProjectBase
+from .callback import make_callbacks
 
 
 def eprint(*args, **kwargs):
@@ -55,6 +58,7 @@ def train(
     n_epochs: int = None,
     device: torch.device = "cuda:0",
     print_epoch_freq: int = 2000,
+    callbacks: list = None,
     **kwargs,
 ):
     n_epochs = get_n_epochs(n_epochs, lrsched)
@@ -85,6 +89,18 @@ def train(
         "reserved_bytes.all.allocated": [],
     }
 
+    if callbacks is not None:
+        [
+            c(
+                model,
+                float("nan"),
+                float("inf"),
+                device=device,
+                mode="pre-train",
+            )
+            for c in callbacks
+        ]
+
     epochs_iter = trange(
         n_epochs, desc="train", unit="epoch", ncols=80, postfix=dict(lr=lrs[0])
     )
@@ -93,6 +109,7 @@ def train(
             dataloader, model, criterion, opt, device=device, **kwargs
         )
         losses[epoch, :] = batch_ret["batch_losses"]
+        mean_loss = losses[epoch, :].mean()
         for key in time_keys:
             timedict[key][epoch, :] = batch_ret[key]
 
@@ -103,8 +120,11 @@ def train(
             info = torch.cuda.memory_stats(device)
             [memdict[k].append(info[k]) for k in memdict.keys()]
 
+        if callbacks is not None:
+            [c(model, epoch, mean_loss, device=device) for c in callbacks]
+
         epochs_iter.set_postfix(
-            dict(lr=lr, loss=losses[epoch, :].mean().item()), refresh=False
+            dict(lr=lr, loss=mean_loss.item()), refresh=False
         )
         if (epoch + 1) % print_epoch_freq == 0:
             batch_time_secs = batch_ret["t_batch"].sum() / 1e9
@@ -114,6 +134,12 @@ def train(
                 f"loss: {losses[epoch, :].mean(): .3f}, \t"
                 f"lr: {lr:.4f}"
             )
+
+    if callbacks is not None:
+        [
+            c(model, epoch, losses.mean(), device=device, mode="post-train")
+            for c in callbacks
+        ]
 
     ix = pd.RangeIndex(stop=losses.size(0), name="epoch")
     cols = pd.RangeIndex(stop=losses.size(1), name="batch")
@@ -214,8 +240,19 @@ def get_n_epochs(n_epochs, lrsched):
 
 
 class TrainBase(ProjectBase):
-    def __init__(self, path, random_state=None, **kwargs):
+    def __init__(
+        self,
+        path,
+        random_state=None,
+        callback_freq=50,
+        model_save_freq=None,
+        embedding_save_freq=None,
+        **kwargs,
+    ):
         super().__init__(path, random_state=random_state)
+        self.callback_freq = callback_freq
+        self.model_save_freq = model_save_freq
+        self.embedding_save_freq = embedding_save_freq
         self.kwargs: dict = kwargs
 
         self.memdict_keys = [
@@ -226,13 +263,15 @@ class TrainBase(ProjectBase):
         ]
 
     def get_deps(self):
-        return [
+        filedeps = [inspect.getfile(make_callbacks)]
+        return filedeps + [
             self.indir / f for f in ["dataset.pt", "model.pt", "criterion.pt"]
         ]
 
     def load(self):
         self.dataset_dict = torch.load(self.indir / "dataset.pt")
         self.dataloader = self.dataset_dict["train_contrastive_loader"]
+        self.dataloader_plain = self.dataset_dict["full_plain_loader"]
 
         self.state_dict = torch.load(self.indir / "model.pt")
         sd = self.state_dict
@@ -243,6 +282,14 @@ class TrainBase(ProjectBase):
         self.criterion_dict = torch.load(self.indir / "criterion.pt")
         self.criterion = self.criterion_dict["criterion"]
 
+        self.callbacks, self.zipf_dict = make_callbacks(
+            self.outdir,
+            self.dataloader_plain,
+            self.callback_freq,
+            self.model_save_freq,
+            self.embedding_save_freq,
+        )
+
     def compute(self):
         self.retdict = train(
             self.dataloader,
@@ -250,6 +297,7 @@ class TrainBase(ProjectBase):
             self.criterion,
             self.opt,
             self.lr,
+            callbacks=self.callbacks,
             **self.kwargs,
         )
         self.losses: pd.DataFrame = self.retdict["losses"]
@@ -260,6 +308,11 @@ class TrainBase(ProjectBase):
         self.save_lambda_alt(
             self.outdir / "model.pt", self.state_dict, torch.save
         )
+
+        self.zipf_dict["zip"].close()
+        tempf = self.zipf_dict["tmp"]
+        os.link(tempf.name, self.outdir / "intermediates.zip")
+        tempf.close()
 
         self.save_lambda(
             self.outdir / "losses.npy", self.losses.values, np.save
