@@ -11,9 +11,8 @@ class CrossEntropy(torch.nn.Module):
 
     def forward(self, features, backbone_features=None, labels=None):
         # backbone_features are unused
-        batch_size = features.size(0) // 2
         return F.cross_entropy(
-            features[:batch_size], labels.to(features.device), **self.kwargs
+            features, torch.hstack((labels, labels)).to(features.device), **self.kwargs
         )
 
 
