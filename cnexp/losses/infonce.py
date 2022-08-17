@@ -31,10 +31,8 @@ class InfoNCECosine(nn.Module):
         self_mask = torch.eye(batch_size, dtype=bool, device=cos_aa.device)
         cos_aa.masked_fill_(self_mask, float("-inf"))
         cos_bb.masked_fill_(self_mask, float("-inf"))
-        logsumexp_1 = torch.cat((cos_ab, cos_bb), dim=-1).logsumexp(-1).mean()
-        logsumexp_2 = (
-            torch.cat((cos_aa, cos_ab.T), dim=-1).logsumexp(-1).mean()
-        )
+        logsumexp_1 = torch.hstack((cos_ab.T, cos_bb)).logsumexp(dim=1).mean()
+        logsumexp_2 = torch.hstack((cos_aa, cos_ab)).logsumexp(dim=1).mean()
         raw_uniformity = logsumexp_1 + logsumexp_2
 
         loss = -(tempered_alignment - raw_uniformity / 2)
@@ -57,10 +55,8 @@ class InfoNCEEuclidean(nn.Module):
 
         tempered_alignment = sim_ab.trace() / batch_size
 
-        logsumexp_1 = torch.cat((sim_ab, sim_bb), dim=-1).sum(-1).log().mean()
-        logsumexp_2 = (
-            torch.cat((sim_aa, sim_ab.T), dim=-1).sum(-1).log().mean()
-        )
+        logsumexp_1 = torch.hstack((sim_ab.T, sim_bb)).sum(1).log_().mean()
+        logsumexp_2 = torch.hstack((sim_aa, sim_ab)).sum(1).log_().mean()
 
         raw_uniformity = logsumexp_1 + logsumexp_2
 
