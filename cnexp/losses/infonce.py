@@ -47,13 +47,16 @@ class InfoNCEEuclidean(nn.Module):
         a = features[:batch_size]
         b = features[batch_size:]
 
-        # cdist does not necessarily return 0 for the self-distance,
-        # but this is not accounted for here.  This should be fine™
-        sim_aa = 1 / (1 + torch.cdist(a, a))
-        sim_bb = 1 / (1 + torch.cdist(b, b))
-        sim_ab = 1 / (1 + torch.cdist(a, b))
+        sim_aa = 1 / (1 + torch.cdist(a, a) ** 2)
+        sim_bb = 1 / (1 + torch.cdist(b, b) ** 2)
+        sim_ab = 1 / (1 + torch.cdist(a, b) ** 2)
 
-        tempered_alignment = sim_ab.trace() / batch_size
+        tempered_alignment = torch.diagonal_copy(sim_ab).log_().mean()
+
+        # exclude self inner product
+        self_mask = torch.eye(batch_size, dtype=bool, device=sim_aa.device)
+        sim_aa.masked_fill_(self_mask, 0.0)
+        sim_bb.masked_fill_(self_mask, 0.0)
 
         logsumexp_1 = torch.hstack((sim_ab.T, sim_bb)).sum(1).log_().mean()
         logsumexp_2 = torch.hstack((sim_aa, sim_ab)).sum(1).log_().mean()
