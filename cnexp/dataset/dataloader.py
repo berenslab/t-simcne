@@ -51,8 +51,14 @@ def make_dataloaders(datasets: dict, random_state=None, **kwargs) -> dict:
             if random_state is None
             else random_state.integers(-(2**63), 2**63)
         )
+
+        if data_key.startswith("test_") or data_key == "full_plain_loader":
+            shuffle = True
+        else:
+            shuffle = False
+
         loaders[l_key] = make_dataloader(
-            datasets[data_key], seed=seed, **kwargs
+            datasets[data_key], seed=seed, shuffle=shuffle, **kwargs
         )
 
     return loaders
