@@ -6,10 +6,9 @@ from .base import LossBase
 
 
 class InfoNCECosine(nn.Module):
-    def __init__(self, temperature=0.5, **kwargs):
+    def __init__(self, temperature=0.5):
         super().__init__()
         self.temperature = temperature
-        self.kwargs = kwargs
 
     def forward(self, features, backbone_features=None, labels=None):
         # backbone_features and labels are unused
@@ -43,10 +42,6 @@ class InfoNCECosine(nn.Module):
 
 
 class InfoNCEEuclidean(nn.Module):
-    def __init__(self, **kwargs):
-        super().__init__()
-        self.kwargs = kwargs
-
     def forward(self, features, backbone_features=None, labels=None):
         # backbone_features and labels are unused
         batch_size = features.size(0) // 2
