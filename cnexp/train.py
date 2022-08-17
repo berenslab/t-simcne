@@ -85,7 +85,9 @@ def train(
         "reserved_bytes.all.allocated": [],
     }
 
-    epochs_iter = trange(n_epochs, desc="train", unit="epoch", ncols=80)
+    epochs_iter = trange(
+        n_epochs, desc="train", unit="epoch", ncols=80, postfix=dict(lr=lrs[0])
+    )
     for epoch in epochs_iter:
         batch_ret = train_one_epoch(
             dataloader, model, criterion, opt, device=device, **kwargs
@@ -167,6 +169,8 @@ def train_one_epoch(
         total=len(dataloader),
         unit="batch",
         ncols=80,
+        mininterval=0.5,
+        miniters=2,
         leave=False,
     ):
         with elapsed_time() as t_batch:
