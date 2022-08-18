@@ -1,6 +1,6 @@
-import subprocess
-import re
 import os
+import re
+import subprocess
 import time
 from pathlib import Path
 
@@ -37,7 +37,11 @@ def redo_ifchange_slurm(
         ]
         # rest can be run in parallel
         redo_ifchange(
-            [dep for dep, p in zip(deplist, partitions) if not _is_gpu_partition(p)]
+            [
+                dep
+                for dep, p in zip(deplist, partitions)
+                if not _is_gpu_partition(p)
+            ]
         )
 
     elif user == "jnboehm91":  # mlcloud
