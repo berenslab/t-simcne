@@ -14,4 +14,9 @@ def linear_acc(
 
 class LinearAcc(EvalBase):
     def compute(self):
-        self.acc = linear_acc(*self.data_split, **self.kwargs)
+        seed = self.random_state.integers(2**32 - 1)
+        self.linear_classifier_seed = seed
+
+        self.acc = linear_acc(
+            *self.data_split, random_state=seed, **self.kwargs
+        )
