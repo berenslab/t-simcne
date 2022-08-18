@@ -164,8 +164,12 @@ def _slurm_launch_and_wait(
             capture_output=True,
             close_fds=False,
             env=env,
-            check=True,
         )
+        if proc.returncode != 0:
+            raise RuntimeError(
+                "sbatch subprocess failed: exit code "
+                f"{proc.returncode}\n{proc.stderr}"
+            )
         slurm_job_id = re.match(r"Submitted batch job (\d+)", proc.stdout)[1]
         job_ids.append(slurm_job_id)
         procs.append(proc)
