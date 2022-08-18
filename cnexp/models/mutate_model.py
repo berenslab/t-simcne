@@ -72,7 +72,9 @@ class FinetuneSimCLRModel(SimCLRModel):
         return supdeps + [self.indir / "model.pt"]
 
     def load(self):
-        self.state_dict = torch.load(self.indir / "model.pt")
+        self.state_dict = torch.load(
+            self.indir / "model.pt", map_location="cpu"
+        )
         self.model = self.state_dict["model"]
 
     def compute(self):
