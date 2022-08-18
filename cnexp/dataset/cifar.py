@@ -42,15 +42,17 @@ class CIFAR10(DatasetBase):
     def compute(self):
         with open(self.outdir / "stdout.txt", "w") as f:
             with contextlib.redirect_stdout(f):
-                self.data_sd = load_cifar10(
-                    root=self.outdir / "cifar10", **self.kwargs
-                )
+                with contextlib.redirect_stderr(f):
+                    self.data_sd = load_cifar10(
+                        root=self.outdir / "cifar10", **self.kwargs
+                    )
 
 
 class CIFAR100(CIFAR10):
     def compute(self):
         with open(self.outdir / "stdout.txt", "w") as f:
             with contextlib.redirect_stdout(f):
-                self.data_sd = load_cifar100(
-                    root=self.outdir / "cifar100", **self.kwargs
-                )
+                with contextlib.redirect_stderr(f):
+                    self.data_sd = load_cifar100(
+                        root=self.outdir / "cifar100", **self.kwargs
+                    )
