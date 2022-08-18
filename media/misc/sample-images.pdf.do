@@ -26,13 +26,13 @@ if __name__ == "__main__":
     for i, (dataset, _) in enumerate(
         itertools.product(datasets, range(n_samples))
     ):
-        xs, (orig, label) = dataset[i]
+        xs, label = dataset[i]
         xs = [x.transpose(0, 2).transpose(1, 0) for x in xs]
         xs = [x - x.min() for x in xs]
         xs = [x / x.max() for x in xs]
         assert xs[0].shape == (32, 32, 3)
 
-        axs[0, i].set_title(dataset.dataset.classes[label])
+        axs[0, i].set_title(dataset.classes[label])
         axs[0, i].imshow(xs[0])
         axs[1, i].imshow(xs[1])
 
