@@ -15,7 +15,9 @@ if __name__ == "__main__":
     c100 = Path("../../experiments/cifar100/")
 
     redo.redo_ifchange([c / "dataset.pt" for c in [c10, c100]])
-    datasets = [torch.load(c / "dataset.pt") for c in [c10, c100]]
+    datasets = [
+        torch.load(c / "dataset.pt")["train_contrastive"] for c in [c10, c100]
+    ]
 
     n_samples = 5
     fig, axs = plt.subplots(

@@ -1,4 +1,4 @@
-from torch.utils.data import Dataset
+from torch.utils.data import ConcatDataset, Dataset
 from torchvision import transforms
 
 
@@ -63,9 +63,27 @@ class TransformedPairDataset(Dataset):
 
     """
 
-    def __init__(self, dataset: Dataset, transform):
+    def __init__(self, dataset: Dataset, transform, classes=None):
         self.dataset = dataset
         self.transform = transform
+
+        # try to find the class list
+        if classes is None:
+            if isinstance(self.dataset, ConcatDataset):
+                try:
+                    self.classes = self.dataset.datasets[0].classes
+
+                except AttributeError:
+                    self.classes = None
+            else:
+                try:
+                    self.classes = self.dataset.classes
+
+                except AttributeError:
+                    self.classes = None
+
+        else:
+            self.classes = classes
 
     def __len__(self):
         return len(self.dataset)
