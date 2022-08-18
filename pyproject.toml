@@ -9,6 +9,13 @@ dependencies = [
     "torch",
     "torchvision",
     "numpy",
+    "pandas",
+    "matplotlib",
+    "tqdm",
+    "python-telegram-bot",
+    "ffmpeg-python",
+    "scikit-learn",
+    "pillow",
 ]
 requires-python = ">=3.9"
 license = {text = "EUPL"}
