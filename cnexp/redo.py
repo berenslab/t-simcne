@@ -139,6 +139,9 @@ def _slurm_launch_and_wait(
         env = os.environ.copy()
         env.pop("REDO_JS_FD", None)  # REDO_MAKE=none (default)
         env.pop("MAKEFLAGS", None)  # REDO_MAKE=gmake
+        # remove file descriptors because they're on another machine
+        env.pop("REDO_STATUS_FD", None)
+        env.pop("REDO_DEP_FD", None)
 
         # not quite sure how to launch it, srun, salloc, sbatch?
         # could feed stuff to sbatch via stdin
