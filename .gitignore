@@ -219,3 +219,7 @@ cython_debug/
 out/
 /media/**/*.pdf
 /media/**/*.png
+
+# redo stuff
+.redo/
+.redo.*
