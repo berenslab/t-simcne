@@ -100,6 +100,8 @@ def main():
     adict_files = {
         "knn[H]": [r / "knn" for r in runs],
         "knn[Z]": [r / "knn:layer=Z" for r in runs],
+        "ann[H]": [r / "ann" for r in runs],
+        "ann[Z]": [r / "ann:layer=Z" for r in runs],
         "sklin[H]": [r / "lin" for r in runs],
         "sklin[Z]": [r / "lin:layer=Z" for r in runs],
         "lin[H]": [r / lin_aug(n_classes=10) for r in runs],
