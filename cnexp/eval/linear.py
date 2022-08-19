@@ -4,7 +4,7 @@ from . import EvalBase
 
 
 def linear_acc(
-    X_train, X_test, y_train, y_test, loss="log", n_jobs=-1, **kwargs
+    X_train, X_test, y_train, y_test, loss="log_loss", n_jobs=-1, **kwargs
 ):
     lin = SGDClassifier(loss=loss, n_jobs=n_jobs, **kwargs)
 
