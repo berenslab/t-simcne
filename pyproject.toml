@@ -16,6 +16,8 @@ dependencies = [
     "ffmpeg-python",
     "scikit-learn",
     "pillow",
+    "annoy",
+    "scipy",
 ]
 requires-python = ">=3.9"
 license = {text = "EUPL"}
