@@ -21,7 +21,7 @@ def redo_ifchange_slurm(
     n_cpus=None,
     mem=None,
     time_str=None,
-    names=None,
+    name=None,
 ):
     user = os.getenv("USER")
     if user == "nboehm":  # cin cluster
@@ -62,7 +62,7 @@ def redo_ifchange_slurm(
             n_cpus=_redo_filter_list(n_cpus, is_ood),
             mem=mem,
             time_str=_redo_filter_list(time_str, is_ood),
-            names=_redo_filter_list(names, is_ood),
+            names=_redo_filter_list(name, is_ood),
         )
 
         # Now they should be all done, so we call redo again to have
