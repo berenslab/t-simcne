@@ -95,6 +95,10 @@ def resolve_class(name):
         from .eval.knn import KNNAcc
 
         return KNNAcc
+    elif name == "ann":
+        from .eval.ann import ANNAcc
+
+        return ANNAcc
     else:
         raise ValueError(f"Unknown class identifier “{name}”")
 
