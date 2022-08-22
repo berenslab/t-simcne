@@ -12,7 +12,8 @@ from cnexp import redo
 def lin_aug(n_classes=10, n_epochs=100):
     return (
         f"readout:out_dim={n_classes}/"
-        f"sgd:lr=30/lrcos:n_epochs={n_epochs}:warmup_epochs=0/suptrain"
+        f"sgd:lr=30/lrcos:n_epochs={n_epochs}:warmup_epochs=0/"
+        "ce_loss/suptrain"
     )
 
 
