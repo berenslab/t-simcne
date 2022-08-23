@@ -99,7 +99,7 @@ def train(
         ]
 
     epochs_iter = trange(
-        n_epochs, desc="train", unit="epoch", ncols=80, postfix=dict(lr=lrs[0])
+        n_epochs, unit="epoch", ncols=80, postfix=dict(lr=lrs[0])
     )
     for epoch in epochs_iter:
         batch_ret = train_one_epoch(
@@ -182,8 +182,8 @@ def train_one_epoch(
         total=len(dataloader),
         unit="batch",
         ncols=80,
-        mininterval=0.5,
-        miniters=2,
+        mininterval=0.75,
+        miniters=1,
         leave=False,
     ):
         with elapsed_time() as t_batch:
