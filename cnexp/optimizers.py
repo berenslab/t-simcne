@@ -5,9 +5,7 @@ from .base import ProjectBase
 
 
 class OptimBase(ProjectBase):
-    def __init__(
-        self, path, random_state=None, lr="scale-lin-batchsize", **kwargs
-    ):
+    def __init__(self, path, random_state=None, lr="lin-bs", **kwargs):
         super().__init__(path, random_state=random_state)
         # kwargs.setdefault("momentum", 0.9)
         # kwargs.setdefault("weight_decay", 5e-4)
@@ -15,7 +13,7 @@ class OptimBase(ProjectBase):
         self.kwargs = kwargs
 
     def get_deps(self):
-        if self.lr == "scale-lin-batchsize":
+        if self.lr == "lin-bs":
             extra_dep = [self.indir / "dataset.pt"]
         else:
             extra_dep = []
@@ -26,7 +24,7 @@ class OptimBase(ProjectBase):
         self.state_dict = torch.load(self.indir / "model.pt")
         self.model = self.state_dict["model"]
 
-        if self.lr == "scale-lin-batchsize":
+        if self.lr == "lin-bs":
             loader = torch.load(self.indir / "dataset.pt")[
                 "train_contrastive_loader"
             ]
@@ -47,14 +45,21 @@ class OptimBase(ProjectBase):
         self.save_lambda_alt(self.outdir / "model.pt", save_data, torch.save)
 
 
-def lr_from_batchsize(batch_size: int, /) -> float:
-    return 0.03 * batch_size / 256
+def lr_from_batchsize(batch_size: int, /, mode="lin-bs") -> float:
+    if mode == "lin-bs":
+        lr = 0.03 * batch_size / 256
+    elif mode == "sqrt-bs":
+        lr = 0.075 * batch_size**0.5
+    else:
+        raise ValueError(f"Unknown mode for calculating the lr ({mode = !r})")
+
+    return lr
 
 
 def make_sgd(
     model, lr=0.12, momentum=0.9, weight_decay=5e-4, batch_size=None, **kwargs
 ):
-    if batch_size is not None and lr == "scale-lin-batchsize":
+    if batch_size is not None and isinstance(lr, str):
         lr = lr_from_batchsize(batch_size)
     elif isinstance(lr, (int, float)):
         lr = lr
@@ -80,7 +85,7 @@ class SGD(OptimBase):
 def make_adam(
     model, lr=0.12, momentum=0.9, weight_decay=5e-4, batch_size=None, **kwargs
 ):
-    if batch_size is not None and lr == "scale-lin-batchsize":
+    if batch_size is not None and isinstance(lr, str):
         lr = lr_from_batchsize(batch_size)
     elif isinstance(lr, (int, float)):
         lr = lr
