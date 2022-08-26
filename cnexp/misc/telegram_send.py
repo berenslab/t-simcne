@@ -8,6 +8,14 @@ import telegram
 from PIL.PngImagePlugin import PngImageFile
 
 
+def get_token_chat_id():
+    modfile = Path(inspect.getfile(TelegramBot))
+    with open(modfile.parent / "telegram.json") as f:
+        rc = json.load(f)
+
+    return rc
+
+
 class TelegramBot:
     def __init__(self, token=None, chat_id=None):
         modfile = Path(inspect.getfile(type(self)))

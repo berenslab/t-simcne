@@ -7,6 +7,7 @@ from contextlib import contextmanager
 import numpy as np
 import pandas as pd
 import torch
+import tqdm.contrib.telegram as tqdm_telegram
 from torch import nn
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import _LRScheduler
@@ -15,6 +16,7 @@ from tqdm import tqdm, trange
 
 from .base import ProjectBase
 from .callback import make_callbacks
+from .misc.telegram_send import get_token_chat_id
 
 
 def eprint(*args, **kwargs):
@@ -98,9 +100,15 @@ def train(
             for c in callbacks
         ]
 
-    epochs_iter = trange(
-        n_epochs, unit="epoch", ncols=80, postfix=dict(lr=lrs[0])
-    )
+    try:
+        rc = get_token_chat_id()
+        epochs_iter = tqdm_telegram.trange(
+            n_epochs, unit="epoch", ncols=80, postfix=dict(lr=lrs[0]), **rc
+        )
+    except:
+        epochs_iter = trange(
+            n_epochs, unit="epoch", ncols=80, postfix=dict(lr=lrs[0])
+        )
     for epoch in epochs_iter:
         batch_ret = train_one_epoch(
             dataloader, model, criterion, opt, device=device, **kwargs
