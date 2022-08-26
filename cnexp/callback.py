@@ -173,8 +173,8 @@ def to_features(model, dataloader, device):
             bb_feats.append(backbone_features.cpu().numpy())
             labels.append(lbls)
 
-    Z = np.vstack(feats)
-    H = np.vstack(bb_feats)
+    Z = np.vstack(feats).astype(np.float16)
+    H = np.vstack(bb_feats).astype(np.float16)
     labels = np.hstack(labels)
 
     return Z, H, labels
