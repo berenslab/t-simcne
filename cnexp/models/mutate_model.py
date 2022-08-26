@@ -97,8 +97,9 @@ class ReadoutModel(FinetuneSimCLRModel):
     """A model that is prepared for the linear readout stage.
 
     Corresponds to the finetuned model with the following parameters:
-    ftmodel:change=proj_head:freeze=1:proj_head=linear:out_dim=10.  So
-    this will actually only set some parameters for the super class.
+    ftmodel:change=proj_head:freeze=1:proj_head=linear and will
+    attempt to infer the out_dim, unless `out_dim` is passed
+    explicitly.
 
     """
 
@@ -108,8 +109,40 @@ class ReadoutModel(FinetuneSimCLRModel):
         change="proj_head",
         freeze="backbone",
         proj_head="linear",
+        out_dim="infer",
         **kwargs,
     ):
         super().__init__(
-            path, change=change, freeze=freeze, proj_head=proj_head, **kwargs
+            path,
+            change=change,
+            freeze=freeze,
+            proj_head=proj_head,
+            out_dim=out_dim,
+            **kwargs,
         )
+
+    def get_deps(self):
+        supdeps = super().get_deps()
+        infer_outdim = self.kwargs["out_dim"] == "infer"
+
+        deps = (
+            (supdeps + [self.indir / "dataset.pt"])
+            if infer_outdim
+            else supdeps
+        )
+        return deps
+
+    def load(self):
+        super().load()
+
+        infer_outdim = self.kwargs["out_dim"] == "infer"
+        if infer_outdim:
+            data_dict = torch.load(self.indir / "dataset.pt")
+            dataset = data_dict["train_contrastive"]
+            try:
+                self.kwargs["out_dim"] = len(dataset.classes)
+            except AttributeError:
+                raise RuntimeError(
+                    "Cannot infer outdim from preceding dataset "
+                    f"and outdim was set to {self.kwargs['out_dim']}"
+                )

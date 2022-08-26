@@ -1,11 +1,18 @@
 from pathlib import Path
 
 
-def lin_aug(n_classes=10, n_epochs=100):
+def lin_aug(n_classes="infer", n_epochs=100):
+    if n_classes != "infer":
+        readout = f"readout:out_dim={n_classes}"
+    else:
+        readout = "readout"
+
     return (
-        f"readout:out_dim={n_classes}/"
-        f"sgd:lr=30/lrcos:n_epochs={n_epochs}:warmup_epochs=0/"
-        "ce_loss/suptrain"
+        Path(readout)
+        / "sgd:lr=30"
+        / f"lrcos:n_epochs={n_epochs}:warmup_epochs=0"
+        / "ce_loss"
+        / "suptrain"
     )
 
 
