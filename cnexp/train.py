@@ -311,6 +311,7 @@ class TrainBase(ProjectBase):
 
         self.zipf_dict["zip"].close()
         tempf = self.zipf_dict["tmp"]
+        (self.outdir / "intermediates.zip").unlink(missing_ok=True)
         os.link(tempf.name, self.outdir / "intermediates.zip")
         tempf.close()
 
