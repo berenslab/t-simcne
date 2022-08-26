@@ -22,8 +22,8 @@ def eprint(*args, **kwargs):
 
 
 @contextmanager
-def elapsed_time():
-    """Context manager to measure the elapsed time in nanoseconds.
+def elapsed_time() -> float:
+    """Context manager to measure the elapsed time in seconds.
 
     Returns a function that should be called right after the context
     ends to measure the elapsed time.
@@ -33,20 +33,17 @@ def elapsed_time():
 
         with elapsed_time() as t:
             sleep(1)
-        elapsed_time_in_ns = t()
+        elapsed_time_in_secs = t()
 
 
     Notes
     -----
-    Nanoseconds are used because it's ever so slightly faster than getting
-    floats returned by `time.perf_counter()`.
-
     Adapted from `https://stackoverflow.com/questions/33987060/
     python-context-manager-that-measures-time`.
 
     """
-    start = time.perf_counter_ns()
-    yield lambda: time.perf_counter_ns() - start
+    start = time.perf_counter()
+    yield lambda: time.perf_counter() - start
 
 
 def train(
@@ -75,7 +72,7 @@ def train(
         "t_batch",
     ]
     timedict = {
-        key: np.empty((n_epochs, len(dataloader)), dtype=int)
+        key: np.empty((n_epochs, len(dataloader)), dtype=np.float16)
         for key in time_keys
     }
 
@@ -169,7 +166,7 @@ def train_one_epoch(
     losses = torch.empty(len(dataloader))
     # time dictionary
     td = {
-        key: np.empty(len(dataloader), dtype=int)
+        key: np.empty(len(dataloader), dtype=np.float16)
         for key in [
             "t_dataload",
             "t_forward",
