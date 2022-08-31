@@ -6,9 +6,10 @@ from .base import LossBase
 
 
 class InfoNCECosine(nn.Module):
-    def __init__(self, temperature=0.5):
+    def __init__(self, temperature: float = 0.5, normalize: bool = True):
         super().__init__()
         self.temperature = temperature
+        self.normalize = normalize
 
     def forward(self, features, backbone_features=None, labels=None):
         # backbone_features and labels are unused
@@ -17,8 +18,9 @@ class InfoNCECosine(nn.Module):
         a = features[:batch_size]
         b = features[batch_size:]
 
-        a = F.normalize(a)
-        b = F.normalize(b)
+        if self.normalize:
+            a = F.normalize(a)
+            b = F.normalize(b)
 
         cos_aa = a @ a.T / self.temperature
         cos_bb = b @ b.T / self.temperature
@@ -72,6 +74,8 @@ class InfoNCELoss(LossBase):
         metric = self.metric
         if metric == "cosine":
             self.criterion = InfoNCECosine(**self.kwargs)
+        elif metric == "dot":
+            self.criterion = InfoNCECosine(normalize=False, **self.kwargs)
         elif metric == "euclidean":
             self.criterion = InfoNCEEuclidean(**self.kwargs)
         else:
