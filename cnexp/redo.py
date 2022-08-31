@@ -55,7 +55,7 @@ def redo_ifchange_slurm(
         ), f"All paths must be in {workdir = }"
 
         is_ood = _redo_ood_list(deplist)
-        _slurm_launch_and_wait(
+        exit_codes = _slurm_launch_and_wait(
             _redo_filter_list(deplist, is_ood),
             user,
             partition=_redo_filter_list(partition, is_ood),
@@ -65,11 +65,14 @@ def redo_ifchange_slurm(
             names=_redo_filter_list(name, is_ood),
         )
 
-        # Now they should be all done, so we call redo again to have
-        # them tracked as a dependecy.  If they failed, then they'll
-        # be actually computed (which is likely to fail, should it
-        # need a gpu).
-        redo_ifchange(deplist)
+        num_failed_jobs = sum(status != 0 for status in exit_codes)
+        if len(exit_codes) > 0 and num_failed_jobs != 0:
+            # try to figure out which job failed
+            raise RuntimeError(f"While redoing {num_failed_jobs} failed")
+        else:
+            # Now all jobs are done successfully, so we call redo
+            # again to have them tracked as a dependecy.
+            redo_ifchange(deplist)
 
     else:
         raise ValueError(f"Unknown user “{user}”, not sure what to do.")
@@ -183,28 +186,51 @@ def _slurm_launch_and_wait(
         # print(f"{name = }, {slurm_job_id = }",
         #       file=sys.stderr)
 
-    names_str = ",".join(names)
-    jobs_str = ",".join(job_ids)
-    # poll for exit
-    while (
-        len(
-            subprocess.check_output(
-                [
-                    "squeue",
-                    "--noheader",
-                    "--user",
-                    user,
-                    "--jobs",
-                    jobs_str,
-                    "--name",
-                    names_str,
-                    "--states=RUNNING,PENDING,COMPLETING,PREEMPTED",
-                ]
+    # check whether we actually started any jobs, otherwise just skip
+    # the polling and exit status.  The issue is that if there are no
+    # job_ids supplied to `sacct` then it prints out all jobs within
+    # the default time window, which can include failed jobs that are
+    # unrelated to the current run.
+    if len(job_ids) > 0:
+        names_str = ",".join(names)
+        jobs_str = ",".join(job_ids)
+        # poll for exit
+        while (
+            len(
+                subprocess.check_output(
+                    [
+                        "squeue",
+                        "--noheader",
+                        "--user",
+                        user,
+                        "--jobs",
+                        jobs_str,
+                        "--name",
+                        names_str,
+                        "--states=RUNNING,PENDING,COMPLETING,PREEMPTED",
+                    ]
+                )
             )
+            > 0
+        ):
+            time.sleep(0.5)
+
+        proc = subprocess.run(
+            ["sacct", "--noheader", "--jobs", jobs_str, "--format=ExitCode"],
+            encoding="utf-8",
+            shell=False,
+            capture_output=True,
         )
-        > 0
-    ):
-        time.sleep(0.5)
+
+        exitcodes = []
+        for exitpair in proc.stdout.split():
+            m = re.match("(\d+):(\d+)", exitpair)
+            exitcodes.append(int(m[1]))
+            exitcodes.append(int(m[2]))
+
+        return exitcodes
+    else:
+        return []
 
 
 def _is_gpu_partition(p):
