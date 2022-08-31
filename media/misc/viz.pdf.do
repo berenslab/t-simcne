@@ -23,11 +23,7 @@ if __name__ == "__main__":
         finetune=prefix / names.default_train() / names.finetune(),
     )
     fnames = [path / "intermediates.zip" for path in path_dict.values()]
-    # redo.redo_ifchange(fnames + [stylef, inspect.getfile(add_scalebar_frac)])
-    # # add after redo, don't want to rerun this now
-    # finetune = prefix / names.default_train() / names.finetune(ft_lr=1.2e-5)
-    # path_dict["finetune"] = finetune
-    # fnames = [path / "intermediates.zip" for path in path_dict.values()]
+    redo.redo_ifchange(fnames + [stylef, inspect.getfile(add_scalebar_frac)])
 
     for key, fname in zip(path_dict.keys(), fnames):
         with zipfile.ZipFile(fname) as zipf:
