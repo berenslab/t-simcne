@@ -13,6 +13,7 @@ def mutate_model(
     proj_head="mlp",
     out_dim: int = 2,
     hidden_dim=None,
+    last_lin_std: float = 1.0,
     # **kwargs,
 ):
     """mutate a given model for further finetuning.
@@ -43,7 +44,9 @@ def mutate_model(
         # swap out the last linear layer of the projection head
         last_layer = model.projection_head.layers[-1]
         dim = last_layer.weight.size(1)
-        model.projection_head.layers[-1] = nn.Linear(dim, out_dim)
+        lin = nn.Linear(dim, out_dim)
+        nn.init.normal_(lin.weight, std=last_lin_std)
+        model.projection_head.layers[-1] = lin
 
     elif change == "proj_head":
         # swap out the entire projection head
