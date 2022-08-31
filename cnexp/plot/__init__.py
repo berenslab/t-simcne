@@ -8,10 +8,14 @@ def get_lettering_fprops():
     )
 
 
-def add_lettering(ax, letter, loc="left", **kwargs):
+def add_lettering(ax, letter, loc="left", fontdict=None, **kwargs):
+    fontdict = get_lettering_fprops() if fontdict is None else fontdict
+
     other_title = ax.get_title("center")
     newlines = len(other_title.split("\n")) - 1
-    return ax.set_title(letter + newlines * "\n", loc=loc, **kwargs)
+    return ax.set_title(
+        letter + newlines * "\n", loc=loc, fontdict=fontdict, **kwargs
+    )
 
 
 def add_letters(axs, *, loc="left", **kwargs):
