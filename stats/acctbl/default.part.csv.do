@@ -116,10 +116,8 @@ def main():
     adict_files = {
         "knn[H]": [r / "knn" for r in runs],
         "knn[Z]": [r / "knn:layer=Z" for r in runs],
-        "ann[H]": [r / "ann" for r in runs],
-        "ann[Z]": [r / "ann:layer=Z" for r in runs],
-        "ann[euc, H]": [r / "ann:metric=euclidean" for r in runs],
-        "ann[euc, Z]": [r / "ann:metric=euclidean:layer=Z" for r in runs],
+        "knn[euc, H]": [r / "knn:metric=euclidean" for r in runs],
+        "knn[euc, Z]": [r / "knn:metric=euclidean:layer=Z" for r in runs],
         "sklin[H]": [r / "lin" for r in runs],
         "sklin[Z]": [r / "lin:layer=Z" for r in runs],
         "lin[H]": [r / expnames.lin_aug() for r in runs],
@@ -141,11 +139,11 @@ def main():
         # changed the performance might deteriorate.
         elif key.startswith("ann"):
             p = "cpu"
-            t = "00:05:30"
+            t = "00:02:30"
         else:
             # normal knn and linear take < 1 minute.
             p = "cpu"
-            t = "00:07:00"
+            t = "00:05:00"
         time_strs += n * [t]
         partitions += n * [f"{p}-preemptable"]
         names += n * [key]
