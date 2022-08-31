@@ -89,3 +89,35 @@ class CosineAnnealingSchedule(_LRScheduler):
 class CosineAnnealing(LRScheduleBase):
     def compute(self):
         self.lr = CosineAnnealingSchedule(self.opt, **self.kwargs)
+
+
+class LinearAnnealingSchedule(CosineAnnealingSchedule):
+    def __init__(
+        self, opt, final_lr=0, n_epochs=1000, warmup_epochs=10, warmup_lr=0
+    ):
+        self.opt = opt
+        self.base_lr = base_lr = opt.defaults["lr"]
+        self.final_lr = final_lr
+        self.n_epochs = n_epochs
+        self.warmup_epochs = warmup_epochs
+        self.warmup_lr = warmup_lr
+
+        # increase the number by one since we initialize the optimizer
+        # before the first step (so the lr is set to 0 in the case of
+        # warmups).  So we start counting at 1, basically.
+        decay_epochs = 1 + n_epochs - warmup_epochs
+        self.decay_epochs = decay_epochs
+
+        warmup_schedule = np.linspace(warmup_lr, base_lr, warmup_epochs)
+        decay_schedule = np.linspace(base_lr, final_lr, decay_epochs)
+        self.lr_schedule = np.hstack((warmup_schedule, decay_schedule))
+
+        self._last_lr = self.lr_schedule[0]
+        self.cur_epoch = 0
+
+        self.init_opt()
+
+
+class LinearAnnealing(LRScheduleBase):
+    def compute(self):
+        self.lr = LinearAnnealingSchedule(self.opt, **self.kwargs)

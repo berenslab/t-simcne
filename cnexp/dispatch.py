@@ -71,6 +71,10 @@ def resolve_class(name):
         from .lrschedule import CosineAnnealing as CA
 
         return CA
+    elif name == "lrlin":
+        from .lrschedule import LinearAnnealing as LA
+
+        return LA
     elif name == "infonce":
         from .losses.infonce import InfoNCELoss
 
