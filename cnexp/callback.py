@@ -3,6 +3,9 @@ import zipfile
 
 import numpy as np
 import torch
+from sklearn.model_selection import train_test_split
+
+from .eval.ann import ann_acc
 
 
 def make_callbacks(
@@ -11,6 +14,8 @@ def make_callbacks(
     freq: int,
     model_save_freq=None,
     embedding_save_freq=None,
+    ann_evaluate=True,
+    seed=None,  # for ann evaluation
 ) -> tuple:
     """Set up callbacks, suitable for use in `train` (train.py).
 
@@ -83,7 +88,7 @@ def make_callbacks(
     model_save_freq = freq if model_save_freq is None else model_save_freq
 
     def model_save_callback(
-        model, epoch, loss, *, device="unused", mode="epoch"
+        model, epoch, loss, *, device="unused", mode="epoch", infodict=None
     ):
         if mode == "pre-train":
             # not interested in the model weights, they are the same
@@ -108,8 +113,20 @@ def make_callbacks(
         freq if embedding_save_freq is None else embedding_save_freq
     )
 
+    def ann_evaluation(features, labels, *, metric="euclidean", n_trees=10):
+        split = train_test_split(
+            features, labels, stratify=labels, random_state=seed
+        )
+
+        if seed is not None:
+            acc = ann_acc(*split, metric=metric, n_trees=n_trees, seed=seed)
+        else:
+            acc = ann_acc(*split, metric=metric, n_trees=n_trees)
+
+        return acc
+
     def embedding_save_callback(
-        model, epoch, loss, *, device="cuda:0", mode="epoch"
+        model, epoch, loss, *, device="cuda:0", mode="epoch", infodict=None
     ):
         if (
             mode in ["pre-train", "post-train"]
@@ -135,6 +152,11 @@ def make_callbacks(
             if mode == "pre-train":
                 with zipf.open("labels.npy", "w") as f:
                     np.save(f, labels)
+
+            if ann_evaluate and infodict is not None:
+                acc = ann_evaluation(features, labels)
+                infodict["ann"] = f"{acc:.0%}"
+
         elif mode == "epoch":
             # not saving embeddings this time
             pass
