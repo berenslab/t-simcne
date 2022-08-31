@@ -46,8 +46,15 @@ def main():
     elif metric == "cos":
         infonce = "infonce:metric=cosine"
         m_str = "cosine"
+    elif metric == "dot":
+        infonce = "infonce:metric=dot"
+        m_str = "dot"
     elif metric == "ft":
         infonce = "infonce:metric=cosine"
+        m_str = "mixed"
+        n_epochs = 1500
+    elif metric == "ftdot":
+        infonce = "infonce:metric=dot"
         m_str = "mixed"
         n_epochs = 1500
     else:
