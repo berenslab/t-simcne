@@ -81,6 +81,8 @@ def train(
     lrs = np.empty(n_epochs + 1)
     lrs[0] = lrsched.get_last_lr()
 
+    infodict = dict(lr=lrsched.get_last_lr())
+
     memdict = {
         "active_bytes.all.peak": [],
         "allocated_bytes.all.peak": [],
@@ -102,12 +104,18 @@ def train(
 
     try:
         rc = get_token_chat_id()
+        name = os.getenv("SLURM_JOB_NAME")
         epochs_iter = tqdm_telegram.trange(
-            n_epochs, unit="epoch", ncols=80, postfix=dict(lr=lrs[0]), **rc
+            n_epochs,
+            desc=name,
+            unit="epoch",
+            ncols=120,
+            postfix=infodict,
+            **rc,
         )
     except:
         epochs_iter = trange(
-            n_epochs, unit="epoch", ncols=80, postfix=dict(lr=lrs[0])
+            n_epochs, unit="epoch", ncols=80, postfix=infodict
         )
     for epoch in epochs_iter:
         batch_ret = train_one_epoch(
@@ -126,11 +134,14 @@ def train(
             [memdict[k].append(info[k]) for k in memdict.keys()]
 
         if callbacks is not None:
-            [c(model, epoch, mean_loss, device=device) for c in callbacks]
+            [
+                c(model, epoch, mean_loss, device=device, infodict=infodict)
+                for c in callbacks
+            ]
 
-        epochs_iter.set_postfix(
-            dict(lr=lr, loss=mean_loss.item()), refresh=False
-        )
+        infodict["loss"] = mean_loss.item()
+        infodict["lr"] = lr
+        epochs_iter.set_postfix(infodict, refresh=False)
         if (epoch + 1) % print_epoch_freq == 0:
             batch_time_secs = batch_ret["t_batch"].sum() / 1e9
             eprint(
@@ -287,12 +298,14 @@ class TrainBase(ProjectBase):
         self.criterion_dict = torch.load(self.indir / "criterion.pt")
         self.criterion = self.criterion_dict["criterion"]
 
+        self.callback_seed = self.random_state.integers(2**31 - 1)
         self.callbacks, self.zipf_dict = make_callbacks(
             self.outdir,
             self.dataloader_plain,
             self.callback_freq,
             self.model_save_freq,
             self.embedding_save_freq,
+            seed=self.callback_seed,
         )
 
     def compute(self):
