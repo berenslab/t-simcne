@@ -27,13 +27,11 @@ from cnexp import redo
 
 
 def mean_std_df(
-    df: pd.DataFrame, columns=["out_dim", "metric"]
+    df: pd.DataFrame, columns=["out_dim", "metric", "n_epochs"]
 ) -> pd.DataFrame:
 
     df = df.drop(columns=["seed", "time[s]"])
-    acc_cols = [
-        c for c in df.columns if c.find("[Z]") > 0 or c.find("[H]") > 0
-    ]
+    acc_cols = [c for c in df.columns if c.find("Z]") > 0 or c.find("H]") > 0]
     new_cols = {old: old[:-1] + ", %]" for old in acc_cols}
     df[acc_cols] = df[acc_cols].apply(lambda x: x * 100)
     df = df.rename(columns=new_cols)
@@ -67,7 +65,7 @@ def transl(key: str) -> str:
 
 
 def main():
-    fname = "../../stats/accuracy-table-runs.csv"
+    fname = "../../stats/acctbl/cifar.csv"
     redo.redo_ifchange(fname)
 
     df: pd.DataFrame = pd.read_csv(fname)
@@ -76,9 +74,10 @@ def main():
     df["time[hr]"] = df["time[s]"] / (60 * 60)
     assert all(key in df.columns for key in colkeys)
 
-    dfg = df.groupby(["out_dim", "metric"])
+    group_dict = dict(metric="Metric", out_dim="dim.", n_epochs="Epochs")
+    dfg = df.groupby(list(group_dict.keys()))
 
-    table_head = ["Training regime"] + [transl(k) for k in colkeys]
+    table_head = list(group_dict.values()) + [transl(k) for k in colkeys]
     with open(sys.argv[3], "w") as f:
 
         def nl():
@@ -91,7 +90,7 @@ def main():
 
         f.write(
             r"\begin{tabularx}{\linewidth}"
-            f"{{X{'c' * (len(table_head) - 1)}}}"
+            f"{{{'X' * len(group_dict)}{'c' * (len(colkeys))}}}"
         )
         nl()
         f.write(r"\toprule")
@@ -103,9 +102,10 @@ def main():
         f.write(r"\midrule")
         nl()
 
-        for (out_dim, metric), df1 in dfg:
-            desc = metric.capitalize() + f" {out_dim}D "
-            f.write(desc)
+        for (metric, out_dim, n_epoch), df1 in dfg:
+            # desc = metric.capitalize() + f" {out_dim}D ({n_epoch} epochs)"
+            # f.write(desc)
+            f.write(f"{metric.capitalize()} & {out_dim} & {n_epoch}")
 
             for key in colkeys:
                 mean = df1[key].mean()
@@ -114,9 +114,9 @@ def main():
                 if any(key.startswith(w) for w in ["lin", "knn", "sklin"]):
                     mean *= 100
                     std *= 100
-                    f.write(f"& ${mean:.1f}\\pm{std:.1f}\\%$ ")
+                    f.write(rf"& ${mean:.1f}\pm{std:.1f}\%$ ")
                 else:
-                    f.write(f"& ${mean:.1f}\\pm{std:.1f}$ ")
+                    f.write(rf"& ${mean:.1f}\pm{std:.1f}$ ")
             tblnl()
 
         f.write(r"\bottomrule")
@@ -128,7 +128,14 @@ def main():
         f.write("the following will be ignored")
         f.write("\n\n------------------------------\n\n")
 
-        mean_std_df(df).T.to_string(f)
+        ms_df = mean_std_df(df)
+        # rearrange the entries
+        append = ["loss", "time[hr]"]
+        ms_df = ms_df[
+            [c for c in ms_df.columns if c not in append]
+            + [c for c in ms_df.columns if c in append]
+        ]
+        ms_df.T.to_string(f)
         nl()
 
 
