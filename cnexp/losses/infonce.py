@@ -3,6 +3,7 @@ import torch.nn.functional as F
 from torch import nn
 
 from .base import LossBase
+from .infonce_alt import InfoNCEDot
 
 
 class InfoNCECosine(nn.Module):
