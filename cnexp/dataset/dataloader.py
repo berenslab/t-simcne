@@ -1,3 +1,5 @@
+import os
+
 import torch
 from torch.utils.data import DataLoader
 
@@ -5,8 +7,22 @@ from .base import DatasetBase
 
 
 def make_dataloader(
-    dataset, seed=None, batch_size=1024, shuffle=True, num_workers=8, **kwargs
+    dataset,
+    seed=None,
+    batch_size: int = 1024,
+    shuffle: bool = True,
+    num_workers: int = -1,
+    **kwargs,
 ) -> DataLoader:
+
+    # interpret numbers lower than 0 like in sklearn (-1 means all
+    # available cores).  This is not supported by pytorch, hence we
+    # need to retrieve the cpu count manually.
+    if num_workers < 0:
+        # cap concurrent workers.  At some point the performance
+        # actually degrades.
+        num_workers = max(num_workers + os.cpu_count() + 1, 8)
+
     if seed is not None:
         gen = torch.Generator()
         gen = gen.manual_seed(seed)
