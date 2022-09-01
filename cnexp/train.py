@@ -111,6 +111,7 @@ def train(
             unit="epoch",
             ncols=120,
             postfix=infodict,
+            leave=False,
             **rc,
         )
     except:
