@@ -25,6 +25,9 @@ def redo_ifchange_slurm(
 ):
     user = os.getenv("USER")
     if user == "nboehm":  # cin cluster
+        if not isinstance(deplist, list):
+            deplist = [deplist]
+
         if not isinstance(partition, list):
             partitions = [partition] * len(deplist)
         else:
