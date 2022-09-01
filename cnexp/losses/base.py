@@ -1,5 +1,4 @@
 import torch
-import torch.nn.functional as F
 
 from ..base import ProjectBase
 

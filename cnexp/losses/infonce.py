@@ -1,3 +1,5 @@
+import inspect
+
 import torch
 import torch.nn.functional as F
 from torch import nn
@@ -69,13 +71,22 @@ class InfoNCEEuclidean(nn.Module):
 
 
 class InfoNCELoss(LossBase):
-    def compute(self):
+    def __init__(self, path, **kwargs):
+        super().__init__(path, **kwargs)
+
         metric = self.metric
         if metric == "cosine":
-            self.criterion = InfoNCECosine(**self.kwargs)
+            self.cls = InfoNCECosine
         elif metric == "dot":
-            self.criterion = InfoNCECosine(normalize=False, **self.kwargs)
+            self.cls = InfoNCEDot
         elif metric == "euclidean":
-            self.criterion = InfoNCEEuclidean(**self.kwargs)
+            self.cls = InfoNCEEuclidean
         else:
             raise ValueError(f"Unknown {metric = !r} for InfoNCE loss")
+
+    def get_deps(self):
+        supdeps = super().get_deps()
+        return [inspect.getfile(self.cls)] + supdeps
+
+    def compute(self):
+        self.criterion = self.cls(**self.kwargs)
