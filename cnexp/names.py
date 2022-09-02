@@ -33,9 +33,11 @@ def model_opt_lr(out_dim=128, n_epochs=1000, backbone="resnet18"):
     return Path(model) / "sgd" / lr
 
 
-def default_train(*, metric="cosine", train_kwargs=None, **kwargs):
+def default_train(
+    *, metric="cosine", train_kwargs=None, loss="infonce", **kwargs
+):
     model_etc = model_opt_lr(**kwargs)
-    loss = "infonce" if metric == "euclidean" else f"infonce:{metric=!s}"
+    loss = "infonce" if metric == "euclidean" else f"{loss}:{metric=!s}"
 
     return model_etc / loss / format_train(train_kwargs)
 
@@ -48,12 +50,13 @@ def finetune(
     llin_epochs=50,
     ft_epochs=450,
     ft_lr=1.2e-4,
+    ft_loss="infonce",
     freeze_last_stage=0,
     train_kwargs=None,
 ):
     last_linear = Path(
         "ftmodel:freeze=1:change=lastlin/sgd/"
-        f"lrcos:n_epochs={llin_epochs}:warmup_epochs=0/infonce"
+        f"lrcos:n_epochs={llin_epochs}:warmup_epochs=0/{ft_loss}"
     )
     train = format_train(train_kwargs)
 
