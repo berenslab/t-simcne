@@ -24,8 +24,7 @@ def make_dataloader(
         num_workers = max(num_workers + os.cpu_count() + 1, 8)
 
     if seed is not None:
-        gen = torch.Generator()
-        gen = gen.manual_seed(seed)
+        gen = torch.Generator().manual_seed(int(seed))
     else:
         gen = None
     dataloader = DataLoader(
@@ -65,7 +64,7 @@ def make_dataloaders(datasets: dict, random_state=None, **kwargs) -> dict:
         seed = (
             None
             if random_state is None
-            else random_state.integers(-(2**63), 2**63)
+            else random_state.integers(-(2**63), 2**63 - 1)
         )
 
         if data_key.startswith("test_") or data_key == "full_plain":
@@ -89,7 +88,9 @@ class GenericDataLoader(DatasetBase):
         self.state_dict = torch.load(self.indir / "dataset.pt")
 
     def compute(self):
-        self.dataloader_dict = make_dataloaders(self.state_dict, **self.kwargs)
+        self.dataloader_dict = make_dataloaders(
+            self.state_dict, random_state=self.random_state, **self.kwargs
+        )
 
     def save(self):
         save_data = dict(**self.state_dict, **self.dataloader_dict)
