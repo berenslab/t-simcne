@@ -83,6 +83,10 @@ def resolve_class(name):
         from .losses.supervised import CELoss
 
         return CELoss
+    elif name == "closs":
+        from .losses.old_impl import SlowContrastiveLoss as SCL
+
+        return SCL
     elif name == "train":
         from .train import TrainBase
 
