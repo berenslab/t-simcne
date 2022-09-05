@@ -18,9 +18,14 @@ def main():
     prefix = Path("../../experiments/cifar/dl/")
     stylef = "../project.mplstyle"
 
-    train_kwargs = dict(device=1)
+    # train_kwargs = dict(device=1)
+    train_kwargs = dict()
     default = prefix / names.default_train(
-        metric="dot", n_epochs=100, train_kwargs=train_kwargs
+        metric="dot",
+        # metric="cosine",
+        # loss="closs",
+        n_epochs=100,
+        train_kwargs=train_kwargs,
     )
     last = default / names.finetune(train_kwargs=train_kwargs)
     ft_lastlin = last.parent
@@ -43,6 +48,7 @@ def main():
         fnames
         + [
             default / "losses.csv",
+            default / "intermediates.zip",
             stylef,
             inspect.getfile(add_scalebar_frac),
             inspect.getfile(add_lettering),
@@ -64,7 +70,6 @@ def main():
         (pd.read_csv(f)["mean"] for f in loss_fnames), ignore_index=True
     )
 
-    blocksize = 1.25
     with plt.style.context(stylef):
         fig, axd = plt.subplot_mosaic(
             "ab\ncd",
