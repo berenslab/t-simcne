@@ -21,10 +21,6 @@ def main():
     # train_kwargs = dict(device=1)
     train_kwargs = dict()
     default = prefix / names.default_train(
-        metric="dot",
-        # metric="cosine",
-        # loss="closs",
-        n_epochs=100,
         train_kwargs=train_kwargs,
     )
     last = default / names.finetune(train_kwargs=train_kwargs)
@@ -32,7 +28,9 @@ def main():
     while not ft_lastlin.name.startswith("train"):
         ft_lastlin = ft_lastlin.parent
 
-    path_dict = dict(ft_lin=ft_lastlin)  # simclr=default, last=last)
+    path_dict = dict(
+        ft_lin=ft_lastlin, last=last
+    )  # simclr=default, last=last)
     fnames = [
         path / f
         for path in path_dict.values()
@@ -85,15 +83,15 @@ def main():
             add_scalebar_frac(ax)
             add_lettering(ax, ltr)
 
-        ax = axd["b"]
-        add_lettering(ax, "b")
-        with zipfile.ZipFile(ft_lastlin / "intermediates.zip") as zipf:
-            with zipf.open("embeddings/pre.npy") as f:
-                ar = np.load(f)
+        # ax = axd["b"]
+        # add_lettering(ax, "b")
+        # with zipfile.ZipFile(ft_lastlin / "intermediates.zip") as zipf:
+        #     with zipf.open("embeddings/pre.npy") as f:
+        #         ar = np.load(f)
 
-        ax.scatter(ar[:, 0], ar[:, 1], c=labels, alpha=0.5, rasterized=True)
-        ax.set_title("before last lin. opt")
-        add_scalebar_frac(ax)
+        # ax.scatter(ar[:, 0], ar[:, 1], c=labels, alpha=0.5, rasterized=True)
+        # ax.set_title("before last lin. opt")
+        # add_scalebar_frac(ax)
 
         ax = axd["c"]
         add_lettering(ax, "c")
@@ -110,6 +108,8 @@ def main():
             rasterized=True,
         )
         ax.set_title(f"simclr {ar.shape[1]}d vector norms")
+        ax.set_xlabel("class index")
+        ax.set_ylabel("$||x||_2$")
 
         ax = axd["d"]
         add_lettering(ax, "d")
