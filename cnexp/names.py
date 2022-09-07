@@ -24,11 +24,17 @@ def format_train(kwargs):
     return train
 
 
-def model_opt_lr(out_dim=128, n_epochs=1000, backbone="resnet18"):
+def model_opt_lr(
+    out_dim=128, n_epochs=1000, warmup_epochs=10, backbone="resnet18"
+):
     model = "model" if out_dim == 128 else f"model:{out_dim=}"
     if backbone != "resnet18":
         model += f":{backbone=!s}"
-    lr = "lrcos" if n_epochs == 1000 else f"lrcos:{n_epochs=}"
+    lr = "lrcos"
+    if n_epochs != 1000:
+        lr += ":{n_epochs=}"
+    if warmup_epochs != 10:
+        lr += ":{warmup_epochs=}"
 
     return Path(model) / "sgd" / lr
 
