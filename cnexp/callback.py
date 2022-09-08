@@ -73,7 +73,7 @@ def make_callbacks(
         freq if checkpoint_save_freq is None else checkpoint_save_freq
     )
 
-    def save_checkpoint(
+    def checkpoint_callback(
         model,
         epoch,
         loss,
@@ -146,7 +146,7 @@ def make_callbacks(
         elif mode == "epoch" and epoch % model_save_freq == 0:
             with open(
                 outdir / f"model/epoch_{epoch:d}.pt",
-                mode="w",
+                mode="wb",
                 buffering=2**18,
             ) as f:
                 sd = dict(model=model, model_sd=model.state_dict())
@@ -191,22 +191,23 @@ def make_callbacks(
                 if mode == "post-train"
                 else f"epoch_{epoch:d}"
             )
-            with open(
-                outdir / f"embeddings/{name}.npy", "w", buffering=2**18
-            ) as f:
-                np.save(f, features)
-            with open(
-                outdir / f"backbone_embeddings/{name}.npy",
-                "w",
-                buffering=2**18,
-            ) as f:
-                np.save(f, backbone_features)
 
             if mode == "pre-train":
                 (outdir / "embeddings").mkdir(exist_ok=True)
                 (outdir / "backbone_embeddings").mkdir(exist_ok=True)
-                with open(outdir / "labels.npy", "w") as f:
+                with open(outdir / "labels.npy", "wb") as f:
                     np.save(f, labels)
+
+            with open(
+                outdir / f"embeddings/{name}.npy", "wb", buffering=2**18
+            ) as f:
+                np.save(f, features)
+            with open(
+                outdir / f"backbone_embeddings/{name}.npy",
+                "wb",
+                buffering=2**18,
+            ) as f:
+                np.save(f, backbone_features)
 
             if ann_evaluate and infodict is not None:
                 acc = ann_evaluation(features, labels, seed=seed)
@@ -219,6 +220,8 @@ def make_callbacks(
             raise ValueError(f"Unknown callback {mode = !r}")
 
     callbacks = []
+    if isinstance(checkpoint_save_freq, int) and checkpoint_save_freq > 0:
+        callbacks.append(checkpoint_callback)
     if isinstance(model_save_freq, int) and model_save_freq > 0:
         callbacks.append(model_save_callback)
     if isinstance(embedding_save_freq, int) and embedding_save_freq > 0:
@@ -298,4 +301,5 @@ def make_checkpoint(
         with zf.open("times.npz", "w") as f:
             np.savez(f, **times)
         with zf.open("memory.json", "w") as f:
-            json.dump(memdict, f)
+            json_str = json.dumps(memdict)
+            f.write(bytes(json_str, encoding="utf-8"))
