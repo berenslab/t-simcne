@@ -1,3 +1,5 @@
+import json
+import os
 import tempfile
 import zipfile
 
@@ -12,6 +14,7 @@ def make_callbacks(
     outdir,
     dataloader: torch.utils.data.DataLoader,
     freq: int,
+    checkpoint_save_freq=1,
     model_save_freq=None,
     embedding_save_freq=None,
     ann_evaluate=True,
@@ -19,10 +22,13 @@ def make_callbacks(
 ) -> tuple:
     """Set up callbacks, suitable for use in `train` (train.py).
 
-    This function creates two callbacks, one for saving a torch model
-    and another one for saving the transformed output of the given
-    `dataloader`.  Both results are saved to a temporary zipfile,
-    which is returned alongside the list of callbacks.
+    This function creates three callbacks.  One is used for creating
+    checkpoints that can be leveraged to resume training at a later
+    stage.  The second one is for saving a torch model and another one
+    for saving the transformed output of the given `dataloader`.  The
+    results for the latter two are saved in the directory `outdir`.
+    The checkpoints will overwrite each other and are saved into the
+    parent folder of `outdir` with the filename `checkpoint.zip`.
 
     There are three modes (pre-train, epoch, and post-train) that will be
     called as follows:
@@ -43,6 +49,11 @@ def make_callbacks(
     freq: int
         The frequency with which the callbacks will be executing.  Can
         be overridden separately.
+    checkpoint_save_freq: int or None (default: 10)
+        The frequency for creating checkpoints that can be used for
+        resuming the training if the process got interrupted at some
+        point (which could happen if the job is preempted for
+        example).
     model_save_freq: int or None (default: None)
         The frequency for saving the model and its parameters.  If
         this is not None and below 0 it will disable the callback
@@ -58,9 +69,61 @@ def make_callbacks(
 
     """
 
+    checkpoint_save_freq = (
+        freq if checkpoint_save_freq is None else checkpoint_save_freq
+    )
 
+    def save_checkpoint(
+        model,
+        epoch,
+        loss,
+        *,
+        opt,
+        lrsched,
+        losses: np.ndarray,
+        times: dict,
+        lrs: np.ndarray,
+        memdict: dict,
+        mode="epoch",
+        **_,
+    ):
+        if mode == "pre-train":
+            # no checkpoint necessary
+            pass
+        elif mode == "epoch" and epoch % model_save_freq == 0:
 
+            with tempfile.NamedTemporaryFile(
+                "wb",
+                dir=outdir.parent,
+                prefix="checkpoint-",
+                suffix=".zip",
+                buffering=1024 * 1024,
+            ) as tempf:
+                make_checkpoint(
+                    tempf,
+                    model,
+                    epoch,
+                    loss,
+                    opt,
+                    lrsched,
+                    losses,
+                    times,
+                    lrs,
+                    memdict,
+                )
 
+                (outdir.parent / "checkpoint.zip").unlink(missing_ok=True)
+                # if something happens in-between these lines I am super unlucky
+                os.link(tempf.name, outdir.parent / "checkpoint.zip")
+
+        elif mode == "epoch":
+            # no checkpoint this time
+            pass
+        elif mode == "post-train":
+            # no checkpoint necessary
+            pass
+        else:
+            raise ValueError(f"Unknown callback {mode = !r}")
 
     model_save_freq = freq if model_save_freq is None else model_save_freq
 
@@ -189,7 +252,7 @@ def to_features(model, dataloader, device):
 
     Z = np.vstack(feats).astype(np.float16)
     H = np.vstack(bb_feats).astype(np.float16)
-    labels = np.hstack(labels)
+    labels = np.hstack(labels).astype(np.uint8)
 
     return Z, H, labels
 
@@ -207,3 +270,32 @@ def ann_evaluation(
         acc = ann_acc(*split, metric=metric, n_trees=n_trees)
 
     return acc
+
+
+def make_checkpoint(
+    tempf, model, epoch, loss, opt, lrsched, losses, times, lrs, memdict
+):
+    with zipfile.ZipFile(tempf, mode="x") as zf:
+        with zf.open("epoch.txt", "w") as f:
+            b = bytes(f"{epoch}\n", encoding="utf-8")
+            f.write(b)
+
+        with zf.open("training_state.pt", "w") as f:
+            sd = dict(
+                model=model,
+                opt=opt,
+                lrsched=lrsched,
+                model_sd=model.state_dict(),
+                opt_sd=opt.state_dict(),
+                lrsched_sd=lrsched.state_dict(),
+            )
+            torch.save(sd, f)
+
+        with zf.open("loss.npy", "w") as f:
+            np.save(f, losses)
+        with zf.open("learning_rates.npy", "w") as f:
+            np.save(f, lrs)
+        with zf.open("times.npz", "w") as f:
+            np.savez(f, **times)
+        with zf.open("memory.json", "w") as f:
+            json.dump(memdict, f)
