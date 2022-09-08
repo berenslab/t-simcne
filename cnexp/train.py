@@ -88,6 +88,7 @@ def load_or_initialize(
             lrs=lrs,
             memdict=memdict,
             start_epoch=0,
+            infodict=dict(),
         )
     else:
         eprint("found checkpoint file", end=" ")
@@ -107,6 +108,8 @@ def load_or_initialize(
                 timedict = dict(np.load(f))
             with zf.open("memory.json") as f:
                 memdict = json.load(f)
+            with zf.open("infodict.json") as f:
+                infodict = json.load(f)
 
         init = dict(
             losses=losses,
@@ -146,6 +149,7 @@ def train(
     lrs = init["lrs"]
     memdict = init["memdict"]
     start_epoch = init["start_epoch"]
+    infodict = init["infodict"]
     if "state_dict" in init:
         sd = init["state_dict"]
         model.load_state_dict(sd["model_sd"])
@@ -153,8 +157,7 @@ def train(
         lrsched.load_state_dict(sd["lrsched_sd"])
 
     lrs[start_epoch] = lrsched.get_last_lr()
-
-    infodict = dict(lr=lrsched.get_last_lr())
+    infodict["lr"] = lrsched.get_last_lr()
 
     cb_kwargs = dict(
         opt=opt,

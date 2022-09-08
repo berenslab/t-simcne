@@ -85,12 +85,15 @@ def make_callbacks(
         lrs: np.ndarray,
         memdict: dict,
         mode="epoch",
+        infodict=None,
         **_,
     ):
         if mode == "pre-train":
             # no checkpoint necessary
             pass
-        elif mode == "epoch" and epoch % model_save_freq == 0:
+        elif (
+            mode == "epoch" and epoch % checkpoint_save_freq == 0 and epoch > 0
+        ):
 
             with tempfile.NamedTemporaryFile(
                 "wb",
@@ -110,6 +113,7 @@ def make_callbacks(
                     times,
                     lrs,
                     memdict,
+                    infodict=infodict,
                 )
 
                 (outdir.parent / "checkpoint.zip").unlink(missing_ok=True)
@@ -276,7 +280,17 @@ def ann_evaluation(
 
 
 def make_checkpoint(
-    tempf, model, epoch, loss, opt, lrsched, losses, times, lrs, memdict
+    tempf,
+    model,
+    epoch,
+    loss,
+    opt,
+    lrsched,
+    losses,
+    times,
+    lrs,
+    memdict,
+    infodict=None,
 ):
     with zipfile.ZipFile(tempf, mode="x") as zf:
         with zf.open("epoch.txt", "w") as f:
@@ -302,4 +316,7 @@ def make_checkpoint(
             np.savez(f, **times)
         with zf.open("memory.json", "w") as f:
             json_str = json.dumps(memdict)
+            f.write(bytes(json_str, encoding="utf-8"))
+        with zf.open("infodict.json", "w") as f:
+            json_str = json.dumps(infodict) if infodict is not None else "{}"
             f.write(bytes(json_str, encoding="utf-8"))
