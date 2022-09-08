@@ -86,6 +86,15 @@ def train(
         "reserved_bytes.all.peak": [],
         "reserved_bytes.all.allocated": [],
     }
+    cb_kwargs = dict(
+        opt=opt,
+        lrsched=lrsched,
+        losses=losses,
+        times=timedict,
+        lrs=lrs,
+        device=device,
+        infodict=infodict,
+    )
 
     if callbacks is not None:
         [
@@ -93,7 +102,7 @@ def train(
                 model,
                 float("nan"),
                 float("inf"),
-                device=device,
+                **cb_kwargs,
                 mode="pre-train",
             )
             for c in callbacks
@@ -132,10 +141,7 @@ def train(
             [memdict[k].append(info[k]) for k in memdict.keys()]
 
         if callbacks is not None:
-            [
-                c(model, epoch, mean_loss, device=device, infodict=infodict)
-                for c in callbacks
-            ]
+            [c(model, epoch, mean_loss, **cb_kwargs) for c in callbacks]
 
         infodict["loss"] = mean_loss.item()
         infodict["lr"] = lr
@@ -143,7 +149,7 @@ def train(
 
     if callbacks is not None:
         [
-            c(model, epoch, losses.mean(), device=device, mode="post-train")
+            c(model, epoch, losses.mean(), **cb_kwargs, mode="post-train")
             for c in callbacks
         ]
 

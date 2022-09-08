@@ -65,7 +65,14 @@ def make_callbacks(
     model_save_freq = freq if model_save_freq is None else model_save_freq
 
     def model_save_callback(
-        model, epoch, loss, *, device="unused", mode="epoch", infodict=None
+        model,
+        epoch,
+        loss,
+        *,
+        device="unused",
+        mode="epoch",
+        infodict=None,
+        **_,
     ):
         if mode == "pre-train":
             (outdir / "model").mkdir(parents=True, exist_ok=True)
@@ -96,7 +103,14 @@ def make_callbacks(
     )
 
     def embedding_save_callback(
-        model, epoch, loss, *, device="cuda:0", mode="epoch", infodict=None
+        model,
+        epoch,
+        loss,
+        *,
+        device="cuda:0",
+        mode="epoch",
+        infodict=None,
+        **_,
     ):
         if (
             mode in ["pre-train", "post-train"]
