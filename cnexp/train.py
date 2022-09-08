@@ -92,9 +92,11 @@ def load_or_initialize(
     else:
         eprint("found checkpoint file", end=" ")
         with zipfile.ZipFile(checkpoint_file) as zf:
-            cur_epoch = int(zipfile.Path(zf, "epoch.txt").read_text())
-            eprint(f"at {cur_epoch = }")
-            with zf.open("trainin_state.pt") as f:
+            with zf.open("epoch.txt") as f:
+                cur_epoch = int(f.read()) + 1
+            eprint(f"for {cur_epoch = }")
+
+            with zf.open("training_state.pt") as f:
                 state_dict = torch.load(f)
 
             with zf.open("loss.npy") as f:
@@ -106,15 +108,16 @@ def load_or_initialize(
             with zf.open("memory.json") as f:
                 memdict = json.load(f)
 
-        init = dict
-    return init(
-        losses=losses,
-        timedict=timedict,
-        lrs=lrs,
-        memdict=memdict,
-        start_epoch=cur_epoch,
-        state_dict=state_dict,
-    )
+        init = dict(
+            losses=losses,
+            timedict=timedict,
+            lrs=lrs,
+            memdict=memdict,
+            start_epoch=cur_epoch,
+            state_dict=state_dict,
+            infodict=infodict,
+        )
+    return init
 
 
 def train(
@@ -159,8 +162,8 @@ def train(
         losses=losses,
         times=timedict,
         lrs=lrs,
+        memdict=memdict,
         device=device,
-        infodict=infodict,
     )
 
     if callbacks is not None:
@@ -217,7 +220,10 @@ def train(
             [memdict[k].append(info[k]) for k in memdict.keys()]
 
         if callbacks is not None:
-            [c(model, epoch, mean_loss, **cb_kwargs) for c in callbacks]
+            [
+                c(model, epoch, mean_loss, infodict=infodict, **cb_kwargs)
+                for c in callbacks
+            ]
 
         infodict["loss"] = mean_loss.item()
         infodict["lr"] = lr
@@ -229,9 +235,9 @@ def train(
             for c in callbacks
         ]
 
-    ix = pd.RangeIndex(stop=losses.size(0), name="epoch")
-    cols = pd.RangeIndex(stop=losses.size(1), name="batch")
-    losses_df = pd.DataFrame(losses.numpy(), index=ix, columns=cols)
+    ix = pd.RangeIndex(stop=losses.shape[0], name="epoch")
+    cols = pd.RangeIndex(stop=losses.shape[1], name="batch")
+    losses_df = pd.DataFrame(losses, index=ix, columns=cols)
     mem_df = pd.DataFrame(memdict, index=ix)
 
     return dict(losses=losses_df, lrs=lrs, memory=mem_df, times=timedict)
@@ -329,12 +335,14 @@ class TrainBase(ProjectBase):
         path,
         random_state=None,
         callback_freq=50,
+        checkpoint_save_freq=1,
         model_save_freq=None,
         embedding_save_freq=None,
         **kwargs,
     ):
         super().__init__(path, random_state=random_state)
         self.callback_freq = callback_freq
+        self.checkpoint_save_freq = checkpoint_save_freq
         self.model_save_freq = model_save_freq
         self.embedding_save_freq = embedding_save_freq
         self.kwargs: dict = kwargs
@@ -372,8 +380,9 @@ class TrainBase(ProjectBase):
             self.save_dir,
             self.dataloader_plain,
             self.callback_freq,
-            self.model_save_freq,
-            self.embedding_save_freq,
+            checkpoint_save_freq=self.checkpoint_save_freq,
+            model_save_freq=self.model_save_freq,
+            embedding_save_freq=self.embedding_save_freq,
             seed=self.callback_seed,
         )
 
@@ -382,7 +391,7 @@ class TrainBase(ProjectBase):
         self.checkpoint_file = self.outdir / "checkpoint.zip"
         mtime1 = (
             self.checkpoint_file.exists()
-            and self.checkpoint_file.stat.st_mtime
+            and self.checkpoint_file.stat().st_mtime
         )
         runfile = self.outdir.parent / "default.run"
         mtime2 = runfile.exists() and runfile.stat().st_mtime
