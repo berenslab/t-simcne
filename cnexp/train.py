@@ -19,10 +19,6 @@ from .callback import make_callbacks
 from .misc.telegram_send import get_token_chat_id
 
 
-def eprint(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
-
-
 @contextmanager
 def elapsed_time() -> float:
     """Context manager to measure the elapsed time in seconds.
@@ -56,7 +52,6 @@ def train(
     lrsched: _LRScheduler,
     n_epochs: int = None,
     device: torch.device = "cuda:0",
-    print_epoch_freq: int = 2000,
     callbacks: list = None,
     **kwargs,
 ):
@@ -143,14 +138,6 @@ def train(
         infodict["loss"] = mean_loss.item()
         infodict["lr"] = lr
         epochs_iter.set_postfix(infodict, refresh=False)
-        if (epoch + 1) % print_epoch_freq == 0:
-            batch_time_secs = batch_ret["t_batch"].sum() / 1e9
-            eprint(
-                f"({epoch + 1: 3d}/{n_epochs: 3d}) "
-                f"time: {batch_time_secs:.2f} \t"
-                f"loss: {losses[epoch, :].mean(): .3f}, \t"
-                f"lr: {lr:.4f}"
-            )
 
     if callbacks is not None:
         [
@@ -172,7 +159,6 @@ def train_one_epoch(
     criterion: nn.Module,
     opt: Optimizer,
     device: torch.device,
-    print_batch_freq: int = 100000,
     **kwargs,
 ):
     if kwargs.get("readout_mode", False):
@@ -236,9 +222,6 @@ def train_one_epoch(
             losses[i] = loss.item()
 
         td["t_batch"][i] = t_batch()
-
-        if (i + 1) % print_batch_freq == 0:
-            eprint(f"batch {i + 1:5d}/{len(dataloader)}, loss {loss:.4f}")
 
     return dict(batch_losses=losses, **td)
 
