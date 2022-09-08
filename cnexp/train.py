@@ -1,4 +1,5 @@
 import inspect
+import json
 import os
 import shutil
 import sys
@@ -19,6 +20,10 @@ from tqdm import tqdm, trange
 from .base import ProjectBase
 from .callback import make_callbacks
 from .misc.telegram_send import get_token_chat_id
+
+
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
 
 
 @contextmanager
@@ -46,12 +51,81 @@ def elapsed_time() -> float:
     yield lambda: time.perf_counter() - start
 
 
+def load_or_initialize(
+    checkpoint_file, n_epochs, n_batches, checkpoint_valid=False
+):
+    if not checkpoint_valid or not checkpoint_file.exists():
+        losses = np.full(
+            (n_epochs, n_batches), float("-inf"), dtype=np.float16
+        )
+
+        time_keys = [
+            "t_dataload",
+            "t_forward",
+            "t_loss",
+            "t_backward",
+            "t_optstep",
+            "t_batch",
+        ]
+        timedict = {
+            key: np.full(
+                (n_epochs, n_batches), float("-inf"), dtype=np.float16
+            )
+            for key in time_keys
+        }
+
+        lrs = np.full(n_epochs + 1, float("-inf"))
+
+        memdict = {
+            "active_bytes.all.peak": [],
+            "allocated_bytes.all.peak": [],
+            "reserved_bytes.all.peak": [],
+            "reserved_bytes.all.allocated": [],
+        }
+        init = dict(
+            losses=losses,
+            timedict=timedict,
+            lrs=lrs,
+            memdict=memdict,
+            start_epoch=0,
+        )
+    else:
+        eprint("found checkpoint file", end=" ")
+        with zipfile.ZipFile(checkpoint_file) as zf:
+            cur_epoch = int(zipfile.Path(zf, "epoch.txt").read_text())
+            eprint(f"at {cur_epoch = }")
+            with zf.open("trainin_state.pt") as f:
+                state_dict = torch.load(f)
+
+            with zf.open("loss.npy") as f:
+                losses = np.load(f)
+            with zf.open("learning_rates.npy") as f:
+                lrs = np.load(f)
+            with zf.open("times.npz") as f:
+                timedict = dict(np.load(f))
+            with zf.open("memory.json") as f:
+                memdict = json.load(f)
+
+        init = dict
+    return init(
+        losses=losses,
+        timedict=timedict,
+        lrs=lrs,
+        memdict=memdict,
+        start_epoch=cur_epoch,
+        state_dict=state_dict,
+    )
+
+
 def train(
     dataloader: DataLoader,
     model: nn.Module,
     criterion: nn.Module,
     opt: Optimizer,
     lrsched: _LRScheduler,
+    *,
+    checkpoint,
+    checkpoint_valid: bool,
     n_epochs: int = None,
     device: torch.device = "cuda:0",
     callbacks: list = None,
@@ -60,32 +134,25 @@ def train(
     n_epochs = get_n_epochs(n_epochs, lrsched)
     model.to(device)
 
-    losses = torch.empty(n_epochs, len(dataloader))
+    n_batches = len(dataloader)
+    init = load_or_initialize(
+        checkpoint, n_epochs, n_batches, checkpoint_valid
+    )
+    losses = init["losses"]
+    timedict = init["timedict"]
+    lrs = init["lrs"]
+    memdict = init["memdict"]
+    start_epoch = init["start_epoch"]
+    if "state_dict" in init:
+        sd = init["state_dict"]
+        model.load_state_dict(sd["model_sd"])
+        opt.load_state_dict(sd["opt_sd"])
+        lrsched.load_state_dict(sd["lrsched_sd"])
 
-    time_keys = [
-        "t_dataload",
-        "t_forward",
-        "t_loss",
-        "t_backward",
-        "t_optstep",
-        "t_batch",
-    ]
-    timedict = {
-        key: np.empty((n_epochs, len(dataloader)), dtype=np.float16)
-        for key in time_keys
-    }
-
-    lrs = np.empty(n_epochs + 1)
-    lrs[0] = lrsched.get_last_lr()
+    lrs[start_epoch] = lrsched.get_last_lr()
 
     infodict = dict(lr=lrsched.get_last_lr())
 
-    memdict = {
-        "active_bytes.all.peak": [],
-        "allocated_bytes.all.peak": [],
-        "reserved_bytes.all.peak": [],
-        "reserved_bytes.all.allocated": [],
-    }
     cb_kwargs = dict(
         opt=opt,
         lrsched=lrsched,
@@ -112,7 +179,10 @@ def train(
         rc = get_token_chat_id()
         name = os.getenv("SLURM_JOB_NAME")
         epochs_iter = tqdm_telegram.trange(
+            start_epoch,
             n_epochs,
+            initial=start_epoch,
+            total=n_epochs,
             desc=name,
             unit="epoch",
             ncols=120,
@@ -122,15 +192,21 @@ def train(
         )
     except:
         epochs_iter = trange(
-            n_epochs, unit="epoch", ncols=80, postfix=infodict
+            start_epoch,
+            n_epochs,
+            initial=start_epoch,
+            total=n_epochs,
+            unit="epoch",
+            ncols=80,
+            postfix=infodict,
         )
     for epoch in epochs_iter:
         batch_ret = train_one_epoch(
             dataloader, model, criterion, opt, device=device, **kwargs
         )
-        losses[epoch, :] = batch_ret["batch_losses"]
+        losses[epoch, :] = batch_ret["batch_losses"].detach().numpy()
         mean_loss = losses[epoch, :].mean()
-        for key in time_keys:
+        for key in timedict.keys():
             timedict[key][epoch, :] = batch_ret[key]
 
         lr = lrsched.step()
@@ -301,6 +377,17 @@ class TrainBase(ProjectBase):
             seed=self.callback_seed,
         )
 
+        # determine the validity of the checkpoint file by comparing
+        # the mtime of the two files.
+        self.checkpoint_file = self.outdir / "checkpoint.zip"
+        mtime1 = (
+            self.checkpoint_file.exists()
+            and self.checkpoint_file.stat.st_mtime
+        )
+        runfile = self.outdir.parent / "default.run"
+        mtime2 = runfile.exists() and runfile.stat().st_mtime
+        self.checkpoint_valid = mtime1 > mtime2
+
     def compute(self):
         self.retdict = train(
             self.dataloader,
@@ -308,6 +395,8 @@ class TrainBase(ProjectBase):
             self.criterion,
             self.opt,
             self.lr,
+            checkpoint=self.checkpoint_file,
+            checkpoint_valid=self.checkpoint_valid,
             callbacks=self.callbacks,
             **self.kwargs,
         )
