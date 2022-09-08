@@ -1,7 +1,9 @@
 import inspect
 import os
+import shutil
 import sys
 import time
+import zipfile
 from contextlib import contextmanager
 
 import numpy as np
@@ -283,8 +285,9 @@ class TrainBase(ProjectBase):
         self.criterion = self.criterion_dict["criterion"]
 
         self.callback_seed = self.random_state.integers(2**31 - 1)
-        self.callbacks, self.zipf_dict = make_callbacks(
-            self.outdir,
+        self.save_dir = self.outdir / ".intermediates"
+        self.callbacks = make_callbacks(
+            self.save_dir,
             self.dataloader_plain,
             self.callback_freq,
             self.model_save_freq,
@@ -311,11 +314,11 @@ class TrainBase(ProjectBase):
             self.outdir / "model.pt", self.state_dict, torch.save
         )
 
-        self.zipf_dict["zip"].close()
-        tempf = self.zipf_dict["tmp"]
-        (self.outdir / "intermediates.zip").unlink(missing_ok=True)
-        os.link(tempf.name, self.outdir / "intermediates.zip")
-        tempf.close()
+        # actually need to create the zipfile here from `self.save_dir`
+        self.save_lambda(
+            self.outdir / "intermediates.zip", self.save_dir, zip_intermediates
+        )
+        shutil.rmtree(self.save_dir)
 
         self.save_lambda(
             self.outdir / "losses.npy", self.losses.values, np.save
@@ -337,3 +340,11 @@ class TrainBase(ProjectBase):
             self.retdict["times"],
             lambda f, d: np.savez(f, **d),
         )
+
+
+def zip_intermediates(f, dir):
+    files = sorted(dir.rglob("*"), key=lambda f: os.stat(f).st_mtime)
+    with zipfile.ZipFile(f, "w") as zipf:
+        [zipf.write(file, file.relative_to(dir)) for file in files]
+
+    return f

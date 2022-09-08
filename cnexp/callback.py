@@ -35,7 +35,7 @@ def make_callbacks(
     Parameters
     ----------
     outdir: Path
-        The directory where the temporary file will be created.
+        The directory where the model and embeddings will be saved to.
     dataloader: DataLoader
         A pytorch dataloader that will be transformed by the model.
         Should not be shuffled as the corresponding labels will only
@@ -53,37 +53,14 @@ def make_callbacks(
 
     Returns
     -------
-    pair of callbacks and dict with fds
-        Returns a pair with the first argument being a list of
-        callbacks that can then be used in train.py; the second will
-        be a dictionary holding the file descriptor to the temporary
-        file (with the `key="tmp"`) and the ZipFile object (with the
-        `key="zip"`).
-
-    Example
-    -------
-    Create the callbacks and save the zipfile after training:
-
-    ```python
-    outdir = Path("/tmp")
-    dataloader = ...  # DataLoader(...)
-    callbacks, fdict = make_callbacks(outdir, dataloader, freq=25)
-
-    # pass callbacks and train
-    ...
-
-    # save the zip file
-    tempf = fdict["tmp"]
-    fdict["zip"].close()
-    os.link(tempf.name, outdir / "callback_results.zip")
-    tempf.close()
-    ```
+    list of callbacks
+        Returns a list of callbacks that can then be used in train.py.
 
     """
-    tempf: tempfile._TemporaryFileWrapper = tempfile.NamedTemporaryFile(
-        "wb", dir=outdir, suffix=".zip", buffering=1024 * 1024
-    )
-    zipf: zipfile.ZipFile = zipfile.ZipFile(tempf, mode="x")
+
+
+
+
 
     model_save_freq = freq if model_save_freq is None else model_save_freq
 
@@ -91,12 +68,17 @@ def make_callbacks(
         model, epoch, loss, *, device="unused", mode="epoch", infodict=None
     ):
         if mode == "pre-train":
+            (outdir / "model").mkdir(parents=True, exist_ok=True)
             # not interested in the model weights, they are the same
             # as they were during initialization, so they have been
             # saved already.
             pass
         elif mode == "epoch" and epoch % model_save_freq == 0:
-            with zipf.open(f"model/epoch_{epoch:d}.pt", mode="w") as f:
+            with open(
+                outdir / f"model/epoch_{epoch:d}.pt",
+                mode="w",
+                buffering=2**18,
+            ) as f:
                 sd = dict(model=model, model_sd=model.state_dict())
                 torch.save(sd, f)
         elif mode == "epoch":
@@ -132,13 +114,21 @@ def make_callbacks(
                 if mode == "post-train"
                 else f"epoch_{epoch:d}"
             )
-            with zipf.open(f"embeddings/{name}.npy", "w") as f:
+            with open(
+                outdir / f"embeddings/{name}.npy", "w", buffering=2**18
+            ) as f:
                 np.save(f, features)
-            with zipf.open(f"backbone_embeddings/{name}.npy", "w") as f:
+            with open(
+                outdir / f"backbone_embeddings/{name}.npy",
+                "w",
+                buffering=2**18,
+            ) as f:
                 np.save(f, backbone_features)
 
             if mode == "pre-train":
-                with zipf.open("labels.npy", "w") as f:
+                (outdir / "embeddings").mkdir(exist_ok=True)
+                (outdir / "backbone_embeddings").mkdir(exist_ok=True)
+                with open(outdir / "labels.npy", "w") as f:
                     np.save(f, labels)
 
             if ann_evaluate and infodict is not None:
@@ -157,7 +147,7 @@ def make_callbacks(
     if isinstance(embedding_save_freq, int) and embedding_save_freq > 0:
         callbacks.append(embedding_save_callback)
 
-    return callbacks, dict(tmp=tempf, zip=zipf)
+    return callbacks
 
 
 def to_features(model, dataloader, device):
