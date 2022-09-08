@@ -26,6 +26,8 @@ xtick.major.size: 2
 ytick.major.size: 2
 xtick.major.pad: 1.5
 ytick.major.pad: 1.5
+xtick.top: False
+ytick.right: False
 
 axes.spines.right: False
 axes.spines.top: False
