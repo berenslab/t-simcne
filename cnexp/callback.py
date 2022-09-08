@@ -113,18 +113,6 @@ def make_callbacks(
         freq if embedding_save_freq is None else embedding_save_freq
     )
 
-    def ann_evaluation(features, labels, *, metric="euclidean", n_trees=10):
-        split = train_test_split(
-            features, labels, stratify=labels, random_state=seed
-        )
-
-        if seed is not None:
-            acc = ann_acc(*split, metric=metric, n_trees=n_trees, seed=seed)
-        else:
-            acc = ann_acc(*split, metric=metric, n_trees=n_trees)
-
-        return acc
-
     def embedding_save_callback(
         model, epoch, loss, *, device="cuda:0", mode="epoch", infodict=None
     ):
@@ -154,7 +142,7 @@ def make_callbacks(
                     np.save(f, labels)
 
             if ann_evaluate and infodict is not None:
-                acc = ann_evaluation(features, labels)
+                acc = ann_evaluation(features, labels, seed=seed)
                 infodict["ann"] = f"{acc:.0%}"
 
         elif mode == "epoch":
@@ -200,3 +188,18 @@ def to_features(model, dataloader, device):
     labels = np.hstack(labels)
 
     return Z, H, labels
+
+
+def ann_evaluation(
+    features, labels, *, metric="euclidean", n_trees=10, seed=None
+):
+    split = train_test_split(
+        features, labels, stratify=labels, random_state=seed
+    )
+
+    if seed is not None:
+        acc = ann_acc(*split, metric=metric, n_trees=n_trees, seed=seed)
+    else:
+        acc = ann_acc(*split, metric=metric, n_trees=n_trees)
+
+    return acc
