@@ -39,7 +39,13 @@ def main():
             f"filename, got {len(parts)} parts in {sys.argv[2]!r}"
         )
 
-    model = "model" if dim == 128 else f"model:out_dim={dim}"
+    model = "model"
+    if dim != 128:
+        model += f":out_dim={dim}"
+    if backbone != "resnet18":
+        model += f":{backbone=!s}"
+
+    dl = "dl"
     opt = "sgd"
     lrsched = "lrcos" if n_epochs == 1000 else f"lrcos:{n_epochs=}"
 
@@ -79,18 +85,21 @@ def main():
 
     rng = np.random.default_rng(511622144)
     seeds = [None, *rng.integers(10_000, size=2)]
-    dataloaders = [
-        "dl" if s is None else f"dl:random_state={s}" for s in seeds
+    models = [
+        model if s is None else f"{model}:random_state={s}" for s in seeds
+    ]
+    trains = [
+        "train" if s is None else f"train:random_state={s}" for s in seeds
     ]
 
-    for (seed, dl) in zip(seeds, dataloaders):
+    for i, (seed, model, train) in enumerate(zip(seeds, models, trains)):
 
         p = prefix / dataset / dl / model / opt / lrsched / infonce / "train"
         if metric == "ft":
             p = p / expnames.finetune()
             dim = 2
         runs.append(p)
-        names.append(f"{name}" + ("" if seed is None else f" {seed}"))
+        names.append(f"{name}-{i + 1}")
         params["path"].append(p)
         params["key"].append(name)
         params["metric"].append(m_str)
