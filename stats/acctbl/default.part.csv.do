@@ -176,7 +176,21 @@ def main():
         key: [float((f / "score.txt").read_text()) for f in val]
         for key, val in adict_files.items()
     }
-    adict["time[s]"] = [float((r / "default.run").read_text()) for r in runs]
+
+    # we need to add up all the times spent training from the
+    # (possibly) different stages
+    time_totals = []
+    for run in runs:
+        tdicts = []
+        while run.name != dataset:
+            if run.name.startswith("train"):
+                tdicts.append(run / "times.npz")
+            run = run.parent
+        redo.redo_ifchange(tdicts)
+        total = sum(np.load(t)["t_batch"].sum() for t in tdicts)
+        time_totals.append(total)
+    adict["time[s]"] = time_totals
+
     adict["loss"] = [
         pd.read_csv(r / "losses.csv")["mean"].tail(1).item() for r in runs
     ]
