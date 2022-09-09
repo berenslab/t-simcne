@@ -135,8 +135,12 @@ def train(
     n_epochs: int = None,
     device: torch.device = "cuda:0",
     callbacks: list = None,
+    seed=None,
     **kwargs,
 ):
+    if seed is not None:
+        torch.manual_seed(seed)
+
     n_epochs = get_n_epochs(n_epochs, lrsched)
     model.to(device)
 
@@ -400,6 +404,8 @@ class TrainBase(ProjectBase):
         mtime2 = runfile.exists() and runfile.stat().st_mtime
         self.checkpoint_valid = mtime1 > mtime2
 
+        self.torch_seed = self.random_state.integers(2**64 - 1, dtype="uint")
+
     def compute(self):
         self.retdict = train(
             self.dataloader,
@@ -410,6 +416,7 @@ class TrainBase(ProjectBase):
             checkpoint=self.checkpoint_file,
             checkpoint_valid=self.checkpoint_valid,
             callbacks=self.callbacks,
+            seed=self.torch_seed,
             **self.kwargs,
         )
         self.losses: pd.DataFrame = self.retdict["losses"]

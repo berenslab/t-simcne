@@ -5,7 +5,9 @@ import torch.nn.functional as F
 from ..base import ProjectBase
 
 
-def make_model(**kwargs):
+def make_model(seed=None, **kwargs):
+    if seed is not None:
+        torch.manual_seed(seed)
     return ResNetFC(**kwargs)
 
 
@@ -27,7 +29,8 @@ class SimCLRModel(ProjectBase):
         pass
 
     def compute(self):
-        self.model = make_model(**self.kwargs)
+        self.torch_seed = self.random_state.integers(2**64 - 1, dtype="uint")
+        self.model = make_model(**self.kwargs, seed=self.torch_seed)
 
     def save(self):
         save_data = dict(model=self.model, model_sd=self.model.state_dict())
