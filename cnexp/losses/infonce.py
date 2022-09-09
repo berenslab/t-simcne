@@ -5,7 +5,6 @@ import torch.nn.functional as F
 from torch import nn
 
 from .base import LossBase
-from .infonce_alt import InfoNCEDot
 
 
 class InfoNCECosine(nn.Module):
@@ -77,8 +76,6 @@ class InfoNCELoss(LossBase):
         metric = self.metric
         if metric == "cosine":
             self.cls = InfoNCECosine
-        elif metric == "dot":
-            self.cls = InfoNCEDot
         elif metric == "euclidean":
             self.cls = InfoNCEEuclidean
         else:
