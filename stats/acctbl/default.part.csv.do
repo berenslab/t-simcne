@@ -122,6 +122,7 @@ def main():
     t_min = round((t_total - t_hr) * 60)
     t_str = f"{t_hr:02d}:{t_min:02d}:00"
 
+    redo.redo_ifchange([prefix / dataset / dl / "dataset.pt"])
     redo.redo_ifchange_slurm(
         [r / "losses.csv" for r in runs],
         partition=f"gpu-{gpu}-preemptable",
