@@ -16,19 +16,22 @@ def main():
         metric, dataset = parts
         dim = 128
         n_epochs = 1000
+        backbone = "resnet18"
 
     elif len(parts) == 3:
         metric, dim_str, dataset = parts
         dim = int(dim_str[:-1])
         assert dim_str[-1] == "d"
         n_epochs = 1000
+        backbone = "resnet18"
 
     elif len(parts) == 4:
-        metric, dim_str, epoch_str, dataset = parts
+        metric, dim_str, extra_str, dataset = parts
         dim = int(dim_str[:-1])
-        n_epochs = 5000
+        n_epochs = 5000 if extra_str == "long" else 1000
+        backbone = "resnet50" if extra_str == "resnet50" else "resnet18"
         assert dim_str[-1] == "d"
-        assert epoch_str == "long"
+        assert extra_str in ["long", "resnet50"]
 
     else:
         raise ValueError(
@@ -92,15 +95,19 @@ def main():
         params["metric"].append(m_str)
         params["seed"].append(seed)
         params["out_dim"].append(dim)
-        params["backbone"].append("resnet18")
+        params["backbone"].append(backbone)
         params["n_epochs"].append(n_epochs)
 
-    gpu = "2080ti" if n_epochs < 5000 else "v100"
+    gpu = "2080ti" if n_epochs < 5000 and backbone == "resnet18" else "v100"
 
     # those times are for cifar10, so this might need to be adjusted
     # for a more complicated dataset.
-    t_epoch_hr = 0.0175 if n_epochs < 5000 else 0.014
+    t_epoch_hr = 0.0175 if gpu == "2080ti" else 0.014
+    t_epoch_hr *= 3 if backbone == "resnet50" else 1
+
     t_total = t_epoch_hr * n_epochs
+    t_total *= 1.05  # add some buffer
+
     t_hr = int(t_total)
     t_min = round((t_total - t_hr) * 60)
     t_str = f"{t_hr:02d}:{t_min:02d}:00"
