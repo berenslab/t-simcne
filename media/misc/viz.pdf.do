@@ -23,7 +23,10 @@ if __name__ == "__main__":
         finetune=prefix / names.default_train() / names.finetune(),
     )
     fnames = [path / "intermediates.zip" for path in path_dict.values()]
-    redo.redo_ifchange(fnames + [stylef, inspect.getfile(add_scalebar_frac)])
+    redo.redo_ifchange_slurm(
+        fnames, partition="gpu-2080ti-preemptable", time_str="17:00:00"
+    )
+    redo.redo_ifchange([stylef, inspect.getfile(add_scalebar_frac)])
 
     for key, fname in zip(path_dict.keys(), fnames):
         with zipfile.ZipFile(fname) as zipf:
