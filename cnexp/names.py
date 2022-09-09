@@ -40,7 +40,7 @@ def model_opt_lr(
 
 
 def default_train(
-    *, metric="cosine", train_kwargs=None, loss="infonce", **kwargs
+    *, metric="euclidean", train_kwargs=None, loss="infonce", **kwargs
 ):
     model_etc = model_opt_lr(**kwargs)
     loss = "infonce" if metric == "euclidean" else f"{loss}:{metric=!s}"
