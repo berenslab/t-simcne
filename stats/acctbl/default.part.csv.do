@@ -116,7 +116,14 @@ def main():
     t_epoch_hr *= 3 if backbone == "resnet50" else 1
 
     t_total = t_epoch_hr * n_epochs
-    t_total *= 1.05  # add some buffer
+    if t_total > 72:
+        raise RuntimeError(
+            f"Runtime guessed ({t_total:.2f} hr) "
+            "exceeds slurm time limit of 72 hours."
+        )
+    else:
+        t_total *= 1.05  # add some buffer
+        t_total = min(72, t_total)
 
     t_hr = int(t_total)
     t_min = round((t_total - t_hr) * 60)
