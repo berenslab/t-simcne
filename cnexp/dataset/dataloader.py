@@ -11,6 +11,7 @@ def make_dataloader(
     batch_size: int = 1024,
     shuffle: bool = True,
     num_workers: int = -1,
+    pin_memory: bool = True,
     **kwargs,
 ) -> DataLoader:
 
@@ -27,6 +28,7 @@ def make_dataloader(
         batch_size=batch_size,
         shuffle=shuffle,
         num_workers=num_workers,
+        pin_memory=pin_memory,
         **kwargs,
     )
     return dataloader
