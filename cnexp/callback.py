@@ -14,7 +14,7 @@ def make_callbacks(
     outdir,
     dataloader: torch.utils.data.DataLoader,
     freq: int,
-    checkpoint_save_freq=1,
+    checkpoint_save_freq=10,
     model_save_freq=None,
     embedding_save_freq=None,
     ann_evaluate=True,
