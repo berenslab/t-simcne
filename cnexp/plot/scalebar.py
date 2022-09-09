@@ -121,8 +121,13 @@ def add_scalebar(
     return sb
 
 
-def add_scalebar_frac(ax, frac_len=0.333, eps=0.5, only_x=True):
+def add_scalebar_frac(
+    ax, frac_len=0.333, eps=0.5, only_x=True, fix_aspect=True
+):
     assert only_x, "Only usage in for this specific use case for now."
+
+    if fix_aspect:
+        ax.set_aspect("equal")
 
     xmin, xmax, *_ = ax.axis()
     val = round_pow10((xmax - xmin) * frac_len)
