@@ -18,14 +18,18 @@ def main():
     # prefix = Path("../../experiments")
     dataset = sys.argv[2]
 
-    keys = ["cos", "cos.3d", "euc", "euc.2d", "euc.2d.long", "ft"]
+    keys = ["cos", "cos.3d", "euc", "euc.2d", "euc.2d.long", "ft", "ft-cos"]
     df_files = [f"{key}.{dataset}.part.csv" for key in keys]
 
-    # since "cos" is a subset of "ft" run we redo it afterwards so the
+    # since "euc" is a subset of "ft" run we redo it afterwards so the
     # run has already finished and it only needs to link the files
-    # from the experiment run.
-    redo.redo_ifchange(df_files[1:])
-    redo.redo_ifchange(df_files[0])
+    # from the experiment run.  The same holds for "cos" and "ft-cos".
+    redo.redo_ifchange(
+        [f for k, f in zip(keys, df_files) if k not in ["euc", "cos"]]
+    )
+    redo.redo_ifchange(
+        [f for k, f in zip(keys, df_files) if k in ["euc", "cos"]]
+    )
 
     df = pd.concat(
         [pd.read_csv(f) for f in df_files], ignore_index=True, copy=False
