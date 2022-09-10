@@ -90,10 +90,14 @@ def main():
         fig, axs = plt.subplots(
             nrows=1,
             ncols=3,
-            figsize=(2.5, 0.75),
+            figsize=(5.5, 1.75),
             constrained_layout=True,
         )
-        titles = ["pre", "ft lin", "final"]
+        titles = [
+            "Before optimization",
+            "Linear fine-tuning",
+            "Final fine-tuning",
+        ]
         plot_finetune_stages(ft, axs, titles)
 
         add_letters(axs)
