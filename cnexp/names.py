@@ -41,9 +41,9 @@ def model_opt_lr(
 
     lr = "lrcos"
     if n_epochs != 1000:
-        lr += ":{n_epochs=}"
+        lr += f":{n_epochs=}"
     if warmup_epochs != 10:
-        lr += ":{warmup_epochs=}"
+        lr += f":{warmup_epochs=}"
 
     return Path(model) / "sgd" / lr
 
