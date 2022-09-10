@@ -428,11 +428,14 @@ class TrainBase(ProjectBase):
             self.outdir / "model.pt", self.state_dict, torch.save
         )
 
-        # actually need to create the zipfile here from `self.save_dir`
-        self.save_lambda(
-            self.outdir / "intermediates.zip", self.save_dir, zip_intermediates
-        )
-        shutil.rmtree(self.save_dir)
+        if self.save_dir.exists():
+            # actually need to create the zipfile here from `self.save_dir`
+            self.save_lambda(
+                self.outdir / "intermediates.zip",
+                self.save_dir,
+                zip_intermediates,
+            )
+            shutil.rmtree(self.save_dir)
 
         self.save_lambda(
             self.outdir / "losses.npy", self.losses.values, np.save
