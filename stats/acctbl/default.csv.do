@@ -18,7 +18,9 @@ def main():
     # prefix = Path("../../experiments")
     dataset = sys.argv[2]
 
-    keys = ["cos", "cos.3d", "euc", "euc.2d", "euc.2d.long", "ft", "ft-cos"]
+    # , "euc.2d.long" <-- start this one manually for now (so it does
+    # not block for all eternity).
+    keys = ["cos", "cos.3d", "euc", "euc.2d", "ft", "ft-cos"]
     df_files = [f"{key}.{dataset}.part.csv" for key in keys]
 
     # since "euc" is a subset of "ft" run we redo it afterwards so the
