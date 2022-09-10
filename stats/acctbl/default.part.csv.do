@@ -9,7 +9,7 @@ from cnexp import redo
 
 
 def main():
-    prefix = Path("../../experiments")
+    root = Path("../../experiments")
 
     parts = sys.argv[2].split(".")
     if len(parts) == 2:
@@ -39,32 +39,14 @@ def main():
             f"filename, got {len(parts)} parts in {sys.argv[2]!r}"
         )
 
-    model = "model"
-    if dim != 128:
-        model += f":out_dim={dim}"
-    if backbone != "resnet18":
-        model += f":{backbone=!s}"
-
-    dl = "dl"
-    opt = "sgd"
-    lrsched = "lrcos" if n_epochs == 1000 else f"lrcos:{n_epochs=}"
-
     if metric == "euc":
-        infonce = "infonce"
         m_str = "euclidean"
     elif metric == "cos":
-        infonce = "infonce:metric=cosine"
         m_str = "cosine"
     elif metric == "ft":
-        infonce = "infonce"
         m_str = "ft"
         n_epochs = 1500
     elif metric == "ft-cos":
-        infonce = "infonce:metric=cosine"
-        m_str = "mixed"
-        n_epochs = 1500
-    elif metric == "ftdot":
-        infonce = "infonce:metric=dot"
         m_str = "mixed"
         n_epochs = 1500
     else:
@@ -85,19 +67,27 @@ def main():
 
     rng = np.random.default_rng(511622144)
     seeds = [None, *rng.integers(10_000, size=2)]
-    models = [
-        model if s is None else f"{model}:random_state={s}" for s in seeds
-    ]
-    trains = [
-        "train" if s is None else f"train:random_state={s}" for s in seeds
-    ]
+    prefix = root / dataset / "dl"
 
-    for i, (seed, model, train) in enumerate(zip(seeds, models, trains)):
+    for i, seed in enumerate(seeds):
 
-        p = prefix / dataset / dl / model / opt / lrsched / infonce / "train"
-        if metric == "ft":
-            p = p / expnames.finetune()
+        if metric == "ft" or metric == "ft-cos":
+            m = "euclidean" if metric != "ft-cos" else "cosine"
+            pretrain = expnames.default_train(
+                metric=m, backbone=backbone, random_state=seed
+            )
+            ft = expnames.finetune(random_state=seed)
+            p = prefix / pretrain / ft
             dim = 2
+        else:
+            spec = expnames.default_train(
+                metric=m_str,
+                out_dim=dim,
+                backbone=backbone,
+                n_epochs=n_epochs,
+                random_state=seed,
+            )
+            p = prefix / spec
         runs.append(p)
         names.append(f"{name}-{i + 1}")
         params["path"].append(p)
@@ -129,7 +119,7 @@ def main():
     t_min = round((t_total - t_hr) * 60)
     t_str = f"{t_hr:02d}:{t_min:02d}:00"
 
-    redo.redo_ifchange([prefix / dataset / dl / "dataset.pt"])
+    redo.redo_ifchange([prefix / "dataset.pt"])
     redo.redo_ifchange_slurm(
         [r / "losses.csv" for r in runs],
         partition=f"gpu-{gpu}-preemptable",
@@ -157,7 +147,7 @@ def main():
         accfiles += [f / "score.txt" for f in val]
         if key == "lin[H]":
             p = "gpu-2080ti"
-            t = "00:45:00"
+            t = "00:35:00"
         # those times for knn/ann assume cosine metric, which is
         # faster to compute than Euclidean.  There is a buffer, but it
         # might not hold for another metric.  Esp. if `n_trees=20` is
