@@ -75,11 +75,10 @@ def main():
         cosine=prefix / names.default_train(metric="cosine"),
     )
     redo.redo_ifchange_slurm(
-        # [d / "default.run" for d in default.values()],
-        default["euclidean"] / "default.run",
+        [d / "default.run" for d in default.values()],
         name="norms",
-        partition="gpu-v100-preemptable",
         time_str="18:30:00",
+        partition="gpu-2080ti-preemptable",
     )
     redo.redo_ifchange(
         [
