@@ -127,7 +127,7 @@ def add_scalebar_frac(
     assert only_x, "Only usage in for this specific use case for now."
 
     if fix_aspect:
-        ax.set_aspect("equal")
+        ax.set_aspect("equal", adjustable="datalim")
 
     xmin, xmax, *_ = ax.axis()
     val = round_pow10((xmax - xmin) * frac_len)
