@@ -1,12 +1,6 @@
 # -*- mode: sh -*-
 
-# https://github.com/dylanaraps/pure-sh-bible#strip-pattern-from-end-of-string
-rstrip() {
-    # Usage: rstrip "string" "pattern"
-    printf '%s\n' "${1%%$2}"
-}
-
-FILE=$(rstrip $2 ".png")
+FILE=$2
 redo-ifchange "$FILE.pdf"
 
 if [ $(command -v pdftoppm) ]; then
@@ -19,4 +13,8 @@ elif [ $(command -v convert) ]; then
 else
     echo "No suitable command found for conversion.  Neither `pdftoppm' nor `convert' available." >&2
     exit 1
+fi
+
+if [ $(command -v exiftool) ]; then
+   exiftool -overwrite_original -tagsfromfile "$FILE.pdf" $3 2>/dev/null >&2
 fi
