@@ -1,7 +1,7 @@
 import json
-import os
 import tempfile
 import zipfile
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -101,6 +101,7 @@ def make_callbacks(
                 prefix="checkpoint-",
                 suffix=".zip",
                 buffering=1024 * 1024,
+                delete=False,
             ) as tempf:
                 make_checkpoint(
                     tempf,
@@ -116,9 +117,7 @@ def make_callbacks(
                     infodict=infodict,
                 )
 
-                (outdir.parent / "checkpoint.zip").unlink(missing_ok=True)
-                # if something happens in-between these lines I am super unlucky
-                os.link(tempf.name, outdir.parent / "checkpoint.zip")
+                Path(tempf.name).replace(outdir.parent / "checkpoint.zip")
 
         elif mode == "epoch":
             # no checkpoint this time
