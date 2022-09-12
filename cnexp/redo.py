@@ -54,8 +54,8 @@ def redo_ifchange_slurm(
         # check whether we're in /mnt/qb/work/... ($WORK)
         workdir = Path(os.getenv("WORK"))
         assert all(
-            dep.resolve().is_relative_to(workdir) for dep in deplist
-        ), f"All paths must be in {workdir = }"
+            (p := dep).is_relative_to(workdir) for dep in deplist
+        ), f"All paths must be in {workdir = }, but got {p}"
 
         is_ood = _redo_ood_list(deplist)
         exit_codes = _slurm_launch_and_wait(
