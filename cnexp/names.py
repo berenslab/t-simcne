@@ -85,7 +85,8 @@ def finetune(
     ftmodel = "ftmodel:freeze=1:change=lastlin"
     if random_state is not None:
         ftmodel += f":{random_state=}"
-    last_linear = Path(
+    ftmodel = Path(ftmodel)
+    last_linear = (
         ftmodel / f"sgd/lrcos:n_epochs={llin_epochs}:warmup_epochs=0/{ft_loss}"
     )
     if random_state is not None and train_kwargs is not None:
