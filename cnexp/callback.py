@@ -304,6 +304,8 @@ def make_checkpoint(
                 model_sd=model.state_dict(),
                 opt_sd=opt.state_dict(),
                 lrsched_sd=lrsched.state_dict(),
+                rng_state=torch.random.get_rng_state(),
+                torch_seed=torch.random.initial_seed(),
             )
             torch.save(sd, f)
 

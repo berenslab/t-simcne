@@ -159,6 +159,8 @@ def train(
         model.load_state_dict(sd["model_sd"])
         opt.load_state_dict(sd["opt_sd"])
         lrsched.load_state_dict(sd["lrsched_sd"])
+        torch.manual_seed(sd["torch_seed"])
+        torch.random.set_rng_state(sd["rng_state"])
 
     lrs[start_epoch] = lrsched.get_last_lr()
     infodict["lr"] = lrsched.get_last_lr()
