@@ -1,5 +1,4 @@
 import abc
-import os
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
@@ -133,14 +132,7 @@ def save_lambda(fname, data, function, openmode="wb"):
 
     fname = Path(fname)
     with NamedTemporaryFile(
-        openmode, dir=fname.parent, suffix=fname.suffix
+        openmode, dir=fname.parent, suffix=fname.suffix, delete=False
     ) as tempf:
         function(tempf, data)
-
-        # assuming that after the file has been successfully saved
-        # with the supplied function, we can safely rename the files.
-        fname.unlink(missing_ok=True)
-        # There would also be the option of
-        # Path(tempf.name).link_to(fname), but I don't quite get
-        # whether there is a subtle difference between the two.
-        os.link(tempf.name, fname)
+        return Path(tempf.name).replace(fname)
