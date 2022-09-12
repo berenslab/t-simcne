@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import inspect
+import os
 import sys
 import zipfile
 from pathlib import Path
@@ -31,6 +32,8 @@ def main():
         / names.finetune(llin_epochs=b[1], ft_epochs=b[2])
         for b in budget_schedules
     }
+    common_prefix = Path(os.path.commonpath(pdict.values()))
+    redo.redo_ifchange([common_prefix / f for f in ["model.pt", "dataset.pt"]])
     redo.redo_ifchange_slurm(
         [d / "intermediates.zip" for d in pdict.values()],
         name=[f"budget-{sum(b)}" for b in budget_schedules],
