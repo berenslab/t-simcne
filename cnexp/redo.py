@@ -54,7 +54,7 @@ def redo_ifchange_slurm(
         # check whether we're in /mnt/qb/work/... ($WORK)
         workdir = Path(os.getenv("WORK"))
         assert all(
-            (p := dep).is_relative_to(workdir) for dep in deplist
+            (p := dep.absolute()).is_relative_to(workdir) for dep in deplist
         ), f"All paths must be in {workdir = }, but got {p}"
 
         is_ood = _redo_ood_list(deplist)
@@ -152,6 +152,8 @@ def _slurm_launch_and_wait(
         # remove file descriptors because they're on another machine
         env.pop("REDO_STATUS_FD", None)
         env.pop("REDO_DEP_FD", None)
+        env.pop("REDO_OOD_TGTS_FD", None)
+        env.pop("REDO_OOD_TGTS_LOCK_FD", None)
 
         # not quite sure how to launch it, srun, salloc, sbatch?
         # could feed stuff to sbatch via stdin
