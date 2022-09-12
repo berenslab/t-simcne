@@ -20,7 +20,7 @@ def make_dataloader(
     if num_workers < 0:
         # cap concurrent workers.  At some point the performance
         # actually degrades.
-        num_workers = max(num_workers + os.cpu_count() + 1, 8)
+        num_workers = min(num_workers + os.cpu_count() + 1, 8)
 
     dataloader = DataLoader(
         dataset,
