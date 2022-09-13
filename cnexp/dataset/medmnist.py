@@ -66,7 +66,11 @@ def load_medmnist_dataset(
         download=download,
         **kwargs,
     )
-    dataset_full = ConcatDataset([dataset_train, dataset_val, dataset_test])
+    all_datasets = [dataset_train, dataset_val, dataset_test]
+    for dataset in all_datasets:
+        dataset.labels = dataset.labels.squeeze()
+
+    dataset_full = ConcatDataset(all_datasets)
 
     # need to make a dataset that returns two transforms of an image
     # fmt: off
