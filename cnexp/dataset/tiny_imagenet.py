@@ -41,7 +41,7 @@ def get_imagenet(root):
     else:
         url = f"http://cs231n.stanford.edu/{fname}"
         cmd = ["wget", url, "--output-document", str(root / fname)]
-        subprocess.run(cmd, check=True)
+        subprocess.run(cmd, check=True, capture_output=True)
         assert h_zip == sha256_file(
             root / fname
         ), f"Hash does not match: {fname}"
