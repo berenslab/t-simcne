@@ -18,6 +18,7 @@ dependencies = [
     "pillow",
     "annoy",
     "scipy",
+    "medmnist",
 ]
 requires-python = ">=3.9"
 license = {text = "EUPL"}
