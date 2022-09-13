@@ -47,6 +47,10 @@ def resolve_class(name):
         from .dataset.medmnist import DermaMNIST
 
         return DermaMNIST
+    elif name == "tiny":
+        from .dataset.tiny_imagenet import TinyImageNet
+
+        return TinyImageNet
     elif name == "dl":
         from .dataset.dataloader import GenericDataLoader as GDL
 
