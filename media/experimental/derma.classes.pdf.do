@@ -9,7 +9,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 from cnexp import names, redo
-from cnexp.plot import add_letters, get_default_metadata
+from cnexp.plot import add_letters, get_default_metadata, get_lettering_fprops
 from cnexp.plot.scalebar import add_scalebar_frac
 
 
@@ -73,6 +73,7 @@ def main():
         axs[0, 1].scatter(
             Y[:, 0], Y[:, 1], c=colors, s=1, alpha=0.85, ec=None, marker="o"
         )
+        # axs[0, 1].set_title("DermaMNIST\n")
 
         markers = [
             mpl.lines.Line2D(
@@ -93,15 +94,20 @@ def main():
         for label, ax in zip(range(8), axs.flat[2:]):
             Ym = Y[labels == label]
             Yo = Y[labels != label]
+            n = (labels == label).sum()
             ax.scatter(Yo[:, 0], Yo[:, 1], c="xkcd:light gray", marker="o")
-            ax.scatter(Ym[:, 0], Ym[:, 1], color=cm(label), marker="o")
+            ax.scatter(Ym[:, 0], Ym[:, 1], c=[cm(label)], marker="o")
             add_scalebar_frac(ax)
             ax.set_title(lbl_dict[str(label)])
+            ax.set_title(
+                f"{n / labels.shape[0]:.1%}", fontsize="small", loc="right"
+            )
 
         add_letters(axs.flat[1:])
+        axs[0, 2].set_title("b", fontdict=get_lettering_fprops(), loc="left")
 
     metadata = get_default_metadata()
-    metadata["Title"] = f"DermaMNIST dataset plotted by class"
+    metadata["Title"] = "DermaMNIST dataset plotted by class"
     fig.savefig(sys.argv[3], format="pdf", metadata=metadata)
 
 
