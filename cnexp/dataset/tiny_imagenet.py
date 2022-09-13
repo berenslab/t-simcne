@@ -46,7 +46,7 @@ def get_imagenet(root):
             root / fname
         ), f"Hash does not match: {fname}"
 
-        with zipfile.ZipFile(fname) as zf:
+        with zipfile.ZipFile(root / fname) as zf:
             zf.extractall(root)
 
         assert imagenet_dir.exists()
