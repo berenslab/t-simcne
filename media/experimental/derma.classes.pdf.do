@@ -66,8 +66,6 @@ def main():
             ncols=3,
             figsize=(5.5, 5.5),
             constrained_layout=True,
-            sharex=True,
-            sharey=True,
         )
         cm = plt.get_cmap()
 
