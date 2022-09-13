@@ -50,6 +50,7 @@ def load_medmnist_dataset(
         mean, std, size=size, setting="test_linear_classifier"
     )
 
+    kwargs["root"].mkdir(exist_ok=True)
     dataset_train = dataset_class(
         "train",
         download=download,
