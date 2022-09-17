@@ -13,7 +13,6 @@ class ContrastiveLoss(torch.nn.Module):
         metric="euclidean",
         eps=1.0,
         noise_in_estimator=1.0,
-        clamp_low=0,
         seed=0,
         loss_aggregation="mean",
     ):
@@ -24,7 +23,6 @@ class ContrastiveLoss(torch.nn.Module):
         self.metric = metric
         self.noise_in_estimator = noise_in_estimator
         self.eps = eps
-        self.clamp_low = clamp_low
         self.seed = seed
         torch.manual_seed(self.seed)
         self.neigh_inds = None
@@ -67,7 +65,7 @@ class ContrastiveLoss(torch.nn.Module):
             # don't save this one
         else:
             neigh_inds = self.neigh_inds
-        neighbors = features[neigh_inds, :]
+        neighbors = features[neigh_inds]
 
         # `neigh_mask` indicates which samples feel attractive force
         # and which ones repel each other
@@ -112,11 +110,8 @@ class ContrastiveLoss(torch.nn.Module):
                 probits = probits / torch.exp(log_Z)
                 estimator = probits / (probits + negative_samples)
 
-            loss = -(
-                ~neigh_mask * torch.log(estimator.clamp(self.clamp_low, 1))
-            ) - (
-                neigh_mask
-                * torch.log((1 - estimator).clamp(self.clamp_low, 1))
+            loss = -(~neigh_mask * torch.log(estimator)) - (
+                neigh_mask * torch.log((1 - estimator))
             )
         elif self.loss_mode == "neg_sample":
             if self.metric == "euclidean":
@@ -127,34 +122,27 @@ class ContrastiveLoss(torch.nn.Module):
             else:
                 estimator = probits / (probits + self.noise_in_estimator)
 
-            loss = -(
-                ~neigh_mask * torch.log(estimator.clamp(self.clamp_low, 1))
-            ) - (
-                neigh_mask
-                * torch.log((1 - estimator).clamp(self.clamp_low, 1))
+            loss = -(~neigh_mask * torch.log(estimator)) - (
+                neigh_mask * torch.log((1 - estimator))
             )
 
         elif self.loss_mode == "umap":
             # cross entropy parametric umap loss
-            loss = -(
-                ~neigh_mask * torch.log(probits.clamp(self.clamp_low, 1))
-            ) - (
-                neigh_mask * torch.log((1 - probits).clamp(self.clamp_low, 1))
+            loss = -(~neigh_mask * torch.log(probits)) - (
+                neigh_mask * torch.log((1 - probits))
             )
         elif self.loss_mode == "infonce":
             # loss from e.g. sohn et al 2016, includes pos similarity
             # in denominator
             loss = -(
-                (torch.log(probits.clamp(self.clamp_low, 1)[~neigh_mask]))
-                - torch.log(probits.clamp(self.clamp_low, 1).sum(axis=1))
+                torch.log(probits[~neigh_mask])
+                - torch.log(probits.sum(axis=1))
             )
         elif self.loss_mode == "infonce_alt":
             # loss simclr
             loss = -(
-                (torch.log(probits.clamp(self.clamp_low, 1)[~neigh_mask]))
-                - torch.log(
-                    (neigh_mask * probits.clamp(self.clamp_low, 1)).sum(axis=1)
-                )
+                torch.log(probits[~neigh_mask])
+                - torch.log((neigh_mask * probits).sum(axis=1))
             )
         else:
             raise ValueError(f"Unknown loss_mode “{self.loss_mode}”")
