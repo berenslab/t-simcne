@@ -199,26 +199,40 @@ def _slurm_launch_and_wait(
     if len(job_ids) > 0:
         names_str = ",".join(names)
         jobs_str = ",".join(job_ids)
+        cmd = [
+            "squeue",
+            "--noheader",
+            "--user",
+            user,
+            "--jobs",
+            jobs_str,
+            "--name",
+            names_str,
+            "--states=RUNNING,PENDING,COMPLETING,PREEMPTED",
+        ]
         # poll for exit
-        while (
-            len(
-                subprocess.check_output(
-                    [
-                        "squeue",
-                        "--noheader",
-                        "--user",
-                        user,
-                        "--jobs",
-                        jobs_str,
-                        "--name",
-                        names_str,
-                        "--states=RUNNING,PENDING,COMPLETING,PREEMPTED",
-                    ]
-                )
-            )
-            > 0
-        ):
-            time.sleep(0.5)
+        while True:
+            proc = subprocess.run(cmd, capture_output=True)
+            if proc.returncode == 0 and len(proc.stdout) == 0:
+                break
+            elif proc.returncode != 0:
+                # see whether the failure persists
+                for i in range(5):
+                    sleep_time = 1
+                    proc = subprocess.run(cmd)
+                    if proc.returncode == 0:
+                        is_ok = True
+                        break
+                    else:
+                        is_ok = False
+                        sleep_time *= 2
+                        time.sleep(sleep_time)
+
+                    # last chance, if this fails an exception is raised
+                    if not is_ok:
+                        subprocess.run(cmd, check=True)
+            else:
+                time.sleep(2)
 
         proc = subprocess.run(
             ["sacct", "--noheader", "--jobs", jobs_str, "--format=ExitCode"],
@@ -229,7 +243,7 @@ def _slurm_launch_and_wait(
 
         exitcodes = []
         for exitpair in proc.stdout.split():
-            m = re.match("(\d+):(\d+)", exitpair)
+            m = re.match(r"(\d+):(\d+)", exitpair)
             exitcodes.append(int(m[1]))
             exitcodes.append(int(m[2]))
 
