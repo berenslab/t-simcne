@@ -1,6 +1,8 @@
 import string
 import subprocess
 
+import numpy as np
+
 
 def get_default_metadata():
     meta = dict(
@@ -43,5 +45,5 @@ def add_letters(axs, *, loc="left", **kwargs):
 
     return [
         add_lettering(ax, letter, loc=loc, fontdict=fprops, **kwargs)
-        for ax, letter in zip(axs.flat, string.ascii_lowercase)
+        for ax, letter in zip(np.array(list(axs)).flat, string.ascii_lowercase)
     ]
