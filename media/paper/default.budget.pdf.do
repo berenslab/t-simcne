@@ -15,9 +15,31 @@ from cnexp.plot.scalebar import add_scalebar_frac
 
 
 def load(dir, extract_name="embeddings/post.npy"):
-    with zipfile.ZipFile(dir / "intermediates.zip") as zipf:
+    zipname = dir / "intermediates.zip"
+    if not zipname.exists():
+        redo.redo_ifchange(zipname)
+
+    with zipfile.ZipFile(zipname) as zipf:
         with zipf.open(extract_name) as f:
             return np.load(f)
+
+
+def flip_maybe(
+    anchor,
+    other,
+    n_samples=10_000,
+    return_orig=True,
+):
+
+    flipx = np.cov(anchor[:, 0], other[:, 0])[0, 1]
+    flipy = np.cov(anchor[:, 1], other[:, 1])[0, 1]
+
+    flip = np.sign([flipx, flipy], dtype=other.dtype)
+
+    if return_orig:
+        return anchor, other * flip
+    else:
+        return other * flip
 
 
 def main():
@@ -27,6 +49,8 @@ def main():
     stylef = "../project.mplstyle"
 
     budget_schedules = [[400, 25, 75], [775, 25, 200], [1000, 50, 450]]
+    # remove last one, is done elsewhere.
+    # budget_schedules = budget_schedules[:-1]
     pdict = {
         sum(b): prefix
         / names.default_train(n_epochs=b[0])
@@ -34,81 +58,58 @@ def main():
         for b in budget_schedules
     }
     common_prefix = Path(os.path.commonpath(pdict.values()))
-    redo.redo_ifchange([common_prefix / f for f in ["model.pt", "dataset.pt"]])
-    redo.redo_ifchange_slurm(
-        [d / "intermediates.zip" for d in pdict.values()],
-        name=[f"budget-{sum(b)}" for b in budget_schedules],
-        partition="gpu-2080ti-preemptable",
-        time_str="18:30:00",
-    )
-    redo.redo_ifchange(
-        [
-            stylef,
-            inspect.getfile(add_scalebar_frac),
-            inspect.getfile(add_letters),
-            inspect.getfile(names),
-        ]
-    )
+    # redo.redo_ifchange([common_prefix / f for f in ["model.pt", "dataset.pt"]])
+    # redo.redo_ifchange_slurm(
+    #     [d / "intermediates.zip" for d in pdict.values()],
+    #     name=[f"budget-{sum(b)}" for b in budget_schedules],
+    #     partition="gpu-2080ti",
+    #     time_str="18:30:00",
+    # )
+    knn_scores = [
+        d / "knn:metric=euclidean:layer=Z/score.txt" for d in pdict.values()
+    ]
+    # redo.redo_ifchange(
+    #     # let's compute them on the headnode, it doesn't take long
+    #     knn_scores
+    #     + [d / "losses.csv" for d in pdict.values()]
+    #     + [
+    #         stylef,
+    #         inspect.getfile(add_scalebar_frac),
+    #         inspect.getfile(add_letters),
+    #         inspect.getfile(names),
+    #     ]
+    # )
 
-    labels = load(pdict[1000], "labels.npy")
+    labels = load(pdict[1500], "labels.npy")
+    anchor = load(pdict[1500])
 
     with plt.style.context(stylef):
         fig, axs = plt.subplots(
-            nrows=3,
-            ncols=len(pdict),
-            figsize=(5.5, 5.5),
+            nrows=1,
+            ncols=3,
+            figsize=(5.5, 1.75),
             constrained_layout=True,
         )
-        for key, ax, budget in zip(pdict.keys(), axs[0], budget_schedules):
+        for key, ax, budget, knnf in zip(
+            pdict.keys(), axs.flat, budget_schedules, knn_scores
+        ):
             ar = load(pdict[key])
+            anchor, ar = flip_maybe(anchor, ar)
             ax.scatter(
                 ar[:, 0], ar[:, 1], c=labels, alpha=0.5, rasterized=True
             )
             add_scalebar_frac(ax)
-            lbl = key if key != 1500 else "default"
+            default = "" if key != 1500 else " (default)"
             ax.set_title(
-                f"{lbl} epochs\n({', '.join(str(b) for b in budget)})"
+                f"{key} epochs{default}\n({', '.join(str(b) for b in budget)})"
             )
 
-        for key, ax, budget in zip(pdict.keys(), axs[1], budget_schedules):
-            path = pdict[key]
-            last = path
-            ft_lin = path.parent
-            while not ft_lin.name.startswith("train"):
-                ft_lin = ft_lin.parent
+            score = float(knnf.read_text())
+            knn = f"$k$nn = {score:.1%}"
+            loss_df = pd.read_csv(pdict[key] / "losses.csv")["mean"]
+            loss = f"final loss {loss_df.tail(1).item():.1f}"
+            ax.set_title(f"{knn}\n{loss}", loc="right", fontsize="small")
 
-            default = ft_lin.parent
-            while not default.name.startswith("train"):
-                default = default.parent
-
-            paths = [default, ft_lin, last]
-            losses = pd.concat(
-                (pd.read_csv(d / "out/losses.csv")["mean"] for d in paths),
-                ignore_index=True,
-            )
-            ax.plot(losses, c="xkcd:dark grey")
-
-        rng = np.random.default_rng(511622144)
-        for key, ax, budget in zip(pdict.keys(), axs[2], budget_schedules):
-            path = pdict[key]
-            last = path
-            ft_lin = path.parent
-            while not ft_lin.name.startswith("train"):
-                ft_lin = ft_lin.parent
-
-            default = ft_lin.parent
-            while not default.name.startswith("train"):
-                default = default.parent
-
-            ar = load(default).astype(float)
-            norms = (ar**2).sum(1) ** 0.5
-            ax.scatter(
-                rng.normal(labels, 0.125),
-                norms,
-                c=labels,
-                alpha=0.5,
-                rasterized=True,
-            )
 
         add_letters(axs)
 
