@@ -64,7 +64,7 @@ def default_train(
             train_kwargs = dict(random_state=random_state)
 
     model_etc = model_opt_lr(**kwargs)
-    loss = "infonce" if metric == "euclidean" else f"{loss}:{metric=!s}"
+    loss = loss if metric == "euclidean" else f"{loss}:{metric=!s}"
 
     return model_etc / loss / format_train(train_kwargs)
 
