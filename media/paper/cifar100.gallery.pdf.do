@@ -118,13 +118,13 @@ def main():
         ft_euc="Fine-tuned\n",
         ft_cos="Fine-tuned\nfrom default SimCLR",
     )
-    # redo.redo_ifchange(prefix / "dataset.pt")
-    # redo.redo_ifchange_slurm(
-    #     [d / "intermediates.zip" for d in pdict.values()],
-    #     name=[f"{key}-gallery" for key in pdict.keys()],
-    #     partition="gpu-2080ti-preemptable",
-    #     time_str="25:30:00",
-    # )
+    redo.redo_ifchange(prefix / "dataset.pt")
+    redo.redo_ifchange_slurm(
+        [d / "intermediates.zip" for d in pdict.values()],
+        name=[f"{key}-c100" for key in pdict.keys()],
+        partition="gpu-2080ti",
+        time_str="24:00:00",
+    )
     redo.redo_ifchange(
         [
             stylef,
