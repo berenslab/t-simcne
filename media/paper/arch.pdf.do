@@ -11,7 +11,7 @@ import pandas as pd
 import torch
 from cnexp import names, plot, redo
 from matplotlib.collections import PatchCollection
-from matplotlib.offsetbox import AnchoredText, AnnotationBbox, OffsetImage
+from matplotlib.offsetbox import AnnotationBbox, OffsetImage
 from matplotlib.patches import Polygon, Rectangle
 from torchvision import transforms
 from torchvision.transforms.functional import to_pil_image
@@ -100,8 +100,8 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
     )
     xmid = (z_j.get_position()[0] + 0.5) / 2
 
-    ix = rng.integers(len(dataset))
     torch.manual_seed(rng.integers(2**64, dtype="uint"))
+    ix = rng.integers(len(dataset))
     zoom = 0.75
     orig_im, _ = dataset.dataset[ix]
     (t_im1, t_im2), label = dataset[ix]
@@ -404,7 +404,7 @@ def main():
 
     # gives a blue car with greyscale, flipping, and cropping
     # transformation.
-    rng = np.random.default_rng(871301915131659)
+    rng = np.random.default_rng(7961039361578664541)
     with plt.style.context(stylef):
         fig, axd = plt.subplot_mosaic(
             [["arch", "emb"], ["arch", "loss"]],
