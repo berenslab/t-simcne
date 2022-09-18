@@ -251,7 +251,7 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
         linewidth=plt.rcParams["axes.linewidth"],
     )
     # resnet polygon
-    xy = np.array([[0.285, 0.25], [0.285, 0.75], [0.5, 0.65], [0.5, 0.35]])
+    xy = np.array([[0.285, 0.2], [0.285, 0.8], [0.5, 0.65], [0.5, 0.35]])
     resnet = Polygon(xy, closed=True, **bkwargs)
     t = txtkwargs.copy()
     t["usetex"] = False
