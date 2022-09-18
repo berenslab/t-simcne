@@ -220,6 +220,7 @@ out/
 /media/**/*.pdf
 /media/**/*.png
 /stats/**/*.csv
+/stats/**/*.npz
 
 # redo stuff
 .redo/
