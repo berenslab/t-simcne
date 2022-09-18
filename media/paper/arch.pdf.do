@@ -349,7 +349,6 @@ def draw_losses(ax, losses):
         # ymax=0.75,
         linewidth=plt.rcParams["axes.linewidth"],
         color="xkcd:light gray",
-        linestyle="dashed",
         zorder=1,
     )
     ax.annotate(
