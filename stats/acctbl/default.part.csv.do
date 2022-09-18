@@ -114,10 +114,20 @@ def main():
         m_str = "cosine"
     elif metric == "ft":
         m_str = "ft"
+        epoch_budget = [1000, 50, 450]
         n_epochs = 1500
+    elif metric == "budget500":
+        n_epochs = 500
+        m_str = "ft"
+        epoch_budget = [400, 25, 75]
+    elif metric == "budget1000":
+        n_epochs = 1000
+        m_str = "ft"
+        epoch_budget = [775, 25, 200]
     elif metric == "ft-cos":
         m_str = "mixed"
         n_epochs = 1500
+        epoch_budget = [1000, 50, 450]
     else:
         raise ValueError(f"Unknown {metric = }")
 
@@ -140,12 +150,19 @@ def main():
 
     for i, seed in enumerate(seeds):
 
-        if metric == "ft" or metric == "ft-cos":
+        if m_str == "ft" or m_str == "ft-cos":
             m = "euclidean" if metric != "ft-cos" else "cosine"
             pretrain = expnames.default_train(
-                metric=m, backbone=backbone, random_state=seed
+                metric=m,
+                backbone=backbone,
+                random_state=seed,
+                n_epochs=epoch_budget[0],
             )
-            ft = expnames.finetune(random_state=seed)
+            ft = expnames.finetune(
+                random_state=seed,
+                llin_epochs=epoch_budget[1],
+                ft_epochs=epoch_budget[2],
+            )
             p = prefix / pretrain / ft
             dim = 2
         else:
