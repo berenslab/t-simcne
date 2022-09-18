@@ -213,7 +213,7 @@ def main():
     redo.redo_ifchange([prefix / "dataset.pt"])
     redo.redo_ifchange_slurm(
         [r / "default.run" for r in runs],
-        partition=f"gpu-{gpu}-preemptable",
+        partition=f"gpu-{gpu}",
         time_str=t_str,
         name=names,
     )
