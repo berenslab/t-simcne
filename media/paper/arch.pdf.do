@@ -36,12 +36,11 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
 
     # loss/similarity
     txt_sim = (
-        r"$\displaystyle\frac{1}"
-        r"{1 + ||\mathrm{\mathbf{z}}_i - \mathrm{\mathbf{z}}_j||^2}$"
+        r"\small$\displaystyle\frac{1}"
+        r"{1 + \|\mathrm{\mathbf{z}}_i - \mathrm{\mathbf{z}}_j\|^2}$"
     )
     txtkwargs = dict(
         usetex=True,
-        fontsize="large",
         horizontalalignment="center",
         verticalalignment="center",
     )
@@ -53,7 +52,7 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
     z_aprops["shrinkB"] = 12
 
     # z_i -> similarity
-    txt_zi = r"$\mathrm{\mathbf{z}}_i$"
+    txt_zi = r"\small$\mathrm{\mathbf{z}}_i$"
     z_i = ax.annotate(
         txt_zi,
         similarity.xy,
@@ -66,7 +65,7 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
     # z_j -> similarity
     rad *= -1
     z_aprops["connectionstyle"] = f"arc3,rad={rad}"
-    txt_zj = r"$\mathrm{\mathbf{z}}_j$"
+    txt_zj = r"\small$\mathrm{\mathbf{z}}_j$"
     z_j = ax.annotate(
         txt_zj,
         similarity.xy,
@@ -79,7 +78,7 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
     h_aprops = aprops.copy()
 
     # h_i -> z_i
-    txt_hi = r"$\mathrm{\mathbf{h}}_i$"
+    txt_hi = r"\small$\mathrm{\mathbf{h}}_i$"
     h_i = ax.annotate(
         txt_hi,
         z_i.get_position(),
@@ -88,18 +87,9 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
         **txtkwargs,
         arrowprops=h_aprops,
     )
-    phead = r"proj.\thinspace head"
-    xmid = (z_i.get_position()[0] + 0.5) / 2
-    ax.annotate(
-        rf"{phead}($\mathrm{{\mathbf{{h}}}}_i$)",
-        (xmid, 1.01),
-        xycoords="axes fraction",
-        va="bottom",
-        **txtkwargs,
-    )
 
     # h_j -> z_j
-    txt_hj = r"$\mathrm{\mathbf{h}}_j$"
+    txt_hj = r"\small$\mathrm{\mathbf{h}}_j$"
     h_j = ax.annotate(
         txt_hj,
         z_j.get_position(),
@@ -109,13 +99,6 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
         **txtkwargs,
     )
     xmid = (z_j.get_position()[0] + 0.5) / 2
-    ax.annotate(
-        rf"{phead}($\mathrm{{\mathbf{{h}}}}_j$)",
-        (xmid, 0.01),
-        xycoords="axes fraction",
-        va="bottom",
-        **txtkwargs,
-    )
 
     ix = rng.integers(len(dataset))
     torch.manual_seed(rng.integers(2**64, dtype="uint"))
@@ -160,21 +143,6 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
         arrowprops=aprops,
     )
     ax.add_artist(abox2)
-    xmid = (h_j.get_position()[0] + 0.2) / 2
-    ax.annotate(
-        r"\texttt{ResNet}($\cdot$)",
-        (xmid, 1.01),
-        xycoords="axes fraction",
-        va="bottom",
-        **txtkwargs,
-    )
-    ax.annotate(
-        r"\texttt{ResNet}($\cdot$)",
-        (xmid, 0.01),
-        xycoords="axes fraction",
-        va="bottom",
-        **txtkwargs,
-    )
 
     im = mpl.offsetbox.OffsetImage(orig_im, zoom=zoom)
     abox = mpl.offsetbox.AnnotationBbox(
@@ -206,6 +174,7 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
     )
     t = txtkwargs.copy()
     t["usetex"] = False
+    t["fontsize"] = "small"
     ax.text(
         0.1,
         0.25,
@@ -243,7 +212,7 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
     #     )
 
     z_aprops = aprops.copy()
-    z_aprops["color"] = "xkcd:light gray"
+    z_aprops["color"] = "xkcd:gray"
     z_aprops["linestyle"] = (0, (5, 5))  # dashed
     z_aprops["shrinkA"] = z_aprops["shrinkB"]
     z_aprops["shrinkB"] = 1
@@ -262,7 +231,7 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
     ax_scatter.add_artist(annot1)
 
     # connect z_j to scatter plot
-    rad = -0.45
+    rad = -0.55
     z_aprops["connectionstyle"] = f"arc3,rad={rad}"
     annot2 = plt.Annotation(
         "",
@@ -283,49 +252,54 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
     # resnet polygon
     xy = np.array([[0.2, 0.25], [0.2, 0.75], [0.5, 0.65], [0.5, 0.35]])
     resnet = Polygon(xy, closed=True, **bkwargs)
-    ax.text(*xy.mean(axis=0), r"\texttt{ResNet}", **txtkwargs)
+    t = txtkwargs.copy()
+    t["usetex"] = False
+    ax.text(*xy.mean(axis=0), "ResNet", **t)
     ax.add_artist(resnet)
 
     ph_props = aprops.copy()
     ph_props["shrinkB"] = 1
-    ph_props["shrinkA"] = 5
+
     t = txtkwargs.copy()
     t.update(
         color="xkcd:slate gray",
         va="bottom",
-        ha="left",
-        rotation=-90,
-        rotation_mode="anchor",
+        ha="center",
         fontsize="small",
+        usetex=False,
     )
+
     # projection head polygon
     layerwidth = 0.015
     r3height = 0.1
     x = 0.55
     dx = 0.075
+    ph_props["shrinkA"] = 8
+    ax.annotate("", (x, 0.5), (x - dx, 0.5), arrowprops=ph_props)
+    ph_props["shrinkA"] = 5
     r1 = Rectangle((x, 0.35), layerwidth, 0.3)
     ax.text(
-        x + layerwidth + 0.0025,
+        x + layerwidth / 2,
         0.65,
-        r"\texttt{512D}",
+        "512",
         **t,
     )
     x += dx
     r2 = Rectangle((x, 0.25), layerwidth, 0.5)
     ax.annotate("", (x, 0.5), (x - dx, 0.5), arrowprops=ph_props)
     ax.text(
-        x + layerwidth + 0.0025,
+        x + layerwidth / 2,
         0.75,
-        r"\texttt{1024D}",
+        "1024",
         **t,
     )
     x += dx
     r3 = Rectangle((x, 0.5 - r3height / 2), layerwidth, r3height)
     ax.annotate("", (x, 0.5), (x - dx, 0.5), arrowprops=ph_props)
     ax.text(
-        x + layerwidth + 0.0025,
+        x + layerwidth / 2,
         0.55,
-        r"\texttt{2D}",
+        "2",
         **t,
     )
 
@@ -335,7 +309,7 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
     ax.text(
         x - dx,
         0.225,
-        r"proj. head",
+        "projection head",
         transform=ax.transAxes,
         **t,
         va="top",
@@ -346,18 +320,13 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
 def draw_losses(ax, losses):
     loss = losses["mean"]
     ax.plot(loss)
-    ax.set_xlabel("epoch", labelpad=0)
+    ax.set_xlabel("epoch", labelpad=-4)
     ax.set_ylabel("loss")
-    ax.tick_params("both", labelsize="x-small")
+    ax.tick_params("both", labelsize="small")
+    ax.spines.left.set_bounds(2.5, 7.5)
     ax.spines.bottom.set_bounds(0, 1500)
-    ax.spines.left.set_bounds(loss.min(), loss.max())
+    ax.set_xticks([0, 1500])
 
-    kwargs = dict(
-        linewidth=plt.rcParams["axes.linewidth"],
-        color="xkcd:light gray",
-        linestyle="dashed",
-        zorder=1,
-    )
     txtkwargs = dict(
         fontsize="small",
         multialignment="center",
@@ -365,27 +334,34 @@ def draw_losses(ax, losses):
         horizontalalignment="center",
     )
     ax.annotate(
-        "default training\nin 128D",
+        "Training\nin 128D",
         (500, 1),
         xycoords=("data", "axes fraction"),
         **txtkwargs,
     )
 
-    ax.axvline(1000, **kwargs)
-
-    ax.axvline(1050, **kwargs)
+    ax.axvspan(
+        1000,
+        1050,
+        # ymax=0.75,
+        linewidth=plt.rcParams["axes.linewidth"],
+        color="xkcd:light gray",
+        linestyle="dashed",
+        zorder=1,
+    )
     ax.annotate(
-        "finetuning\nin 2D",
-        (1050 + 450 / 2, 1),
+        "Finetuning\nin 2D",
+        (1050 + 10, 1),
         xycoords=("data", "axes fraction"),
+        ha="left",
         **txtkwargs,
     )
 
-    txtkwargs["fontsize"] = "x-small"
+    # txtkwargs["fontsize"] = "x-small"
     aprops = dict(
         # arrowstyle="-[,widthB=0.5",
         arrowstyle="-|>",
-        connectionstyle="arc3,rad=-0.55",
+        connectionstyle="arc3,rad=-0.5",
         color="xkcd:dark gray",
         linewidth=plt.rcParams["axes.linewidth"],
         relpos=(1, 0.5),
@@ -393,10 +369,11 @@ def draw_losses(ax, losses):
     )
 
     ax.annotate(
-        "linear layer\nfinetuning",
+        "Linear layer\nfinetuning",
         (1025, loss[1025]),
         (500, 5),
         arrowprops=aprops,
+        va="center",
         **txtkwargs,
     )
 
@@ -416,7 +393,8 @@ def main():
     )
 
     dataset = torch.load(root / "dataset.pt")["train_contrastive"]
-    model = torch.load("seed-3118/model.pt", map_location="cpu")["model"]
+    # model = torch.load("seed-3118/model.pt", map_location="cpu")["model"]
+    model = None  # phony, since it's currently unused.
 
     # those might not exist on another computer, so check that the
     # correct embedding is loaded in Y.
