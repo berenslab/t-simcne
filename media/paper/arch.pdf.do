@@ -258,6 +258,7 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
 
     ph_props = aprops.copy()
     ph_props["shrinkB"] = 1
+    ph_props["shrinkA"] = 5
 
     t = txtkwargs.copy()
     t.update(
@@ -268,24 +269,19 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
         usetex=False,
     )
 
-    # projection head polygon
-    layerwidth = 0.015
-    r3height = 0.1
-    x = 0.55
-    dx = 0.075
-    ph_props["shrinkA"] = 8
-    ax.annotate("", (x, 0.5), (x - dx, 0.5), arrowprops=ph_props)
-    ph_props["shrinkA"] = 5
-    r1 = Rectangle((x, 0.35), layerwidth, 0.3)
     ax.text(
-        x + layerwidth / 2,
-        0.65,
+        0.5,
+        0.66,
         "512",
         **t,
     )
-    x += dx
-    r2 = Rectangle((x, 0.25), layerwidth, 0.5)
-    ax.annotate("", (x, 0.5), (x - dx, 0.5), arrowprops=ph_props)
+
+    # projection head polygon
+    layerwidth = 0.015
+    dx = 0.125 - layerwidth / 2
+    x = 0.5 + dx
+    ax.annotate("", (x, 0.5), (0.5 - layerwidth, 0.5), arrowprops=ph_props)
+    hidden_layer = Rectangle((x, 0.25), layerwidth, 0.5)
     ax.text(
         x + layerwidth / 2,
         0.75,
@@ -293,7 +289,8 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
         **t,
     )
     x += dx
-    r3 = Rectangle((x, 0.5 - r3height / 2), layerwidth, r3height)
+    r3height = 0.1
+    out_layer = Rectangle((x, 0.5 - r3height / 2), layerwidth, r3height)
     ax.annotate("", (x, 0.5), (x - dx, 0.5), arrowprops=ph_props)
     ax.text(
         x + layerwidth / 2,
@@ -302,7 +299,7 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
         **t,
     )
 
-    pc = PatchCollection([r1, r2, r3], **bkwargs)
+    pc = PatchCollection([hidden_layer, out_layer], **bkwargs)
     t = txtkwargs.copy()
     t["usetex"] = False
     ax.text(
