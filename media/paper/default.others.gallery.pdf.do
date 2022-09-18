@@ -29,8 +29,8 @@ def main():
     pdicts = [
         dict(
             euc=prefix / names.default_train(random_state=seed, out_dim=2),
-            euc_5k=prefix
-            / names.default_train(random_state=seed, out_dim=2, n_epochs=5000),
+            # euc_5k=prefix
+            # / names.default_train(random_state=seed, out_dim=2, n_epochs=5000),
             # needs to be plotted differently, with Hammer projection
             # cos=prefix / names.default_train(out_dim=3, metric="cosine"),
             ft_euc=prefix
@@ -51,7 +51,7 @@ def main():
     )
     redo.redo_ifchange_slurm(
         [d / "intermediates.zip" for pdict in pdicts for d in pdict.values()],
-        name="gallery",
+        name=[f"{key}-gallery" for pdict in pdicts for key in pdict.keys()],
         partition="gpu-2080ti-preemptable",
         time_str="18:30:00",
     )
@@ -70,7 +70,7 @@ def main():
         fig, axxs = plt.subplots(
             nrows=len(pdicts),
             ncols=len(pdicts[0]),
-            figsize=(5.5, 1.5),
+            figsize=(5.5, 3),
             constrained_layout=True,
         )
         for pdict, axs in zip(pdicts, axxs):
@@ -82,7 +82,7 @@ def main():
                 add_scalebar_frac(ax)
                 ax.set_title(titles[key])
 
-        add_letters(axs)
+        add_letters(axxs)
 
     metadata = get_default_metadata()
     metadata["Title"] = (
