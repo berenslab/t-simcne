@@ -44,7 +44,7 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
         horizontalalignment="center",
         verticalalignment="center",
     )
-    similarity = ax.annotate(txt_sim, (1, 0.5), **txtkwargs)
+    similarity = ax.annotate(txt_sim, (0.9, 0.5), **txtkwargs)
 
     z_aprops = aprops.copy()
     rad = -np.pi / 8
@@ -56,7 +56,7 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
     z_i = ax.annotate(
         txt_zi,
         similarity.xy,
-        (0.75, 1),
+        (0.65, 1),
         xycoords="axes fraction",
         arrowprops=z_aprops,
         **txtkwargs,
@@ -69,7 +69,7 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
     z_j = ax.annotate(
         txt_zj,
         similarity.xy,
-        (0.75, 0),
+        (0.65, 0),
         xycoords="axes fraction",
         arrowprops=z_aprops,
         **txtkwargs,
@@ -98,7 +98,6 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
         arrowprops=h_aprops,
         **txtkwargs,
     )
-    xmid = (z_j.get_position()[0] + 0.5) / 2
 
     torch.manual_seed(rng.integers(2**64, dtype="uint"))
     ix = rng.integers(len(dataset))
@@ -181,16 +180,15 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
     t["horizontalalignment"] = "left"
     ax.text(
         0,
-        0.15,
-        "data\naug-\nmentation",
+        -0.01,
+        "data aug-\nmentation",
         va="top",
-        ha="left",
         **t,
     )
     ax.text(
         0,
-        0.85,
-        "data\naug.",
+        1.01,
+        "data aug-\nmentation",
         va="bottom",
         **t,
     )
@@ -267,7 +265,7 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
         color="xkcd:slate gray",
         va="bottom",
         ha="center",
-        fontsize="small",
+        fontsize="medium",
         usetex=False,
     )
 
@@ -280,8 +278,9 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
 
     # projection head polygon
     layerwidth = 0.015
-    dx = 0.125 - layerwidth / 2
+    dx = 0.075 - layerwidth / 2
     x = 0.5 + dx
+    xend = z_i.get_position()[0]
     ax.annotate("", (x, 0.5), (0.5 - layerwidth, 0.5), arrowprops=ph_props)
     hidden_layer = Rectangle((x, 0.25), layerwidth, 0.5)
     ax.text(
@@ -322,8 +321,9 @@ def draw_losses(ax, losses):
     ax.set_ylabel("loss")
     ax.tick_params("both", labelsize="small")
     ax.spines.left.set_bounds(2.5, 7.5)
+    ax.set_yticks([2.5, 5, 7.5])
     ax.spines.bottom.set_bounds(0, 1500)
-    ax.set_xticks([0, 1500])
+    ax.set_xticks([0, 1000, 1500], labels=["0", "", "1500"])
 
     txtkwargs = dict(
         fontsize="small",
@@ -406,9 +406,9 @@ def main():
     with plt.style.context(stylef):
         fig, axd = plt.subplot_mosaic(
             [["arch", "emb", "loss"]],
-            gridspec_kw=dict(width_ratios=[3, 1, 1]),
-            figsize=(5.5, 1),
-            constrained_layout=True,
+            gridspec_kw=dict(width_ratios=[3, 2, 1], hspace=0.0),
+            figsize=(5.5, 1.4),
+            constrained_layout=False,
         )
 
         draw_arch(axd["arch"], dataset, model, Y, axd["emb"], rng=rng)
@@ -421,12 +421,13 @@ def main():
             alpha=0.5,
             rasterized=True,
         )
+        ax.text(0.33, 1, "CIFAR-10", transform=ax.transAxes, va="top")
         # add_scalebar_frac(ax)
         ax.set_axis_off()
         ax.axis("equal")
 
         draw_losses(axd["loss"], losses)
-        plot.add_letters(axd.values())
+        fig.subplots_adjust(0.0, 0.12, 0.99, 0.88)
 
     metadata = plot.get_default_metadata()
     metadata["Title"] = "Architecture for contrastive visualization"
