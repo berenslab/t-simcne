@@ -344,7 +344,7 @@ class TrainBase(ProjectBase):
         path,
         random_state=None,
         callback_freq=50,
-        checkpoint_save_freq=10,
+        checkpoint_save_freq=-1,
         model_save_freq=None,
         embedding_save_freq=None,
         **kwargs,
