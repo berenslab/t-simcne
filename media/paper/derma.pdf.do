@@ -2,6 +2,7 @@
 
 import inspect
 import sys
+import zipfile
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -14,6 +15,8 @@ def main():
     root = Path("../../")
     stylef = "../project.mplstyle"
     fname = "stats/derma.pixelspace.npz"
+    prefix = root / "experiments/derma/dl"
+    path = prefix / names.default_train() / names.finetune()
 
     redo.redo_ifchange(
         [
@@ -26,11 +29,20 @@ def main():
 
     npz = np.load(root / fname)
 
+    with zipfile.ZipFile(path / "intermediates.zip") as zf:
+        with zf.open("embeddings/post.npy") as f:
+            Y = np.load(f)
+
     with plt.style.context(stylef):
         fig, axs = plt.subplots(1, 3, figsize=(5.5, 1.8))
         labels = npz["labels"]
         cm = plt.get_cmap("tab10", lut=10)
         colors = cm(labels)
+
+        ax = axs[0]
+        ax.scatter(Y[:, 0], Y[:, 1], c=colors, alpha=0.85, rasterized=True)
+        plot.add_scalebar_frac(ax)
+        # ax.set_title("")
 
         ax = axs[1]
         Y = npz["tsne"]
