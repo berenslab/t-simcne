@@ -34,19 +34,19 @@ def plot_finetune_stages(ft_path, axs, titles):
         initial = initial.parent
 
     paths = [initial, ft_lin, final]
-    redo.redo_ifchange([p / "intermediates.zip" for p in paths])
+    # redo.redo_ifchange([p / "intermediates.zip" for p in paths])
 
-    with zipfile.ZipFile(ft_lin / "intermediates.zip") as zipf:
+    with zipfile.ZipFile(ft_lin / "out/intermediates.zip") as zipf:
         with zipf.open("embeddings/pre.npy") as f:
             pre_emb = np.load(f)
 
         with zipf.open("labels.npy") as f:
             labels = np.load(f)
 
-    with zipfile.ZipFile(ft_lin / "intermediates.zip") as zipf:
+    with zipfile.ZipFile(ft_lin / "out/intermediates.zip") as zipf:
         with zipf.open("embeddings/post.npy") as f:
             ft_emb = np.load(f)
-    with zipfile.ZipFile(final / "intermediates.zip") as zipf:
+    with zipfile.ZipFile(final / "out/intermediates.zip") as zipf:
         with zipf.open("embeddings/post.npy") as f:
             final_emb = np.load(f)
 
@@ -71,12 +71,12 @@ def main():
 
     default = prefix / names.default_train()
     ft = default / names.finetune()
-    redo.redo_ifchange_slurm(
-        ft / "default.run",
-        name="ftstages",
-        partition="gpu-v100-preemptable",
-        time_str="18:30:00",
-    )
+    # redo.redo_ifchange_slurm(
+    #     ft / "default.run",
+    #     name="ftstages",
+    #     partition="gpu-2080ti",
+    #     time_str="18:30:00",
+    # )
     redo.redo_ifchange(
         [
             stylef,
