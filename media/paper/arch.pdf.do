@@ -102,8 +102,10 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
         **txtkwargs,
     )
 
-    torch.manual_seed(rng.integers(2**64, dtype="uint"))
+    rng.integers(2**64, dtype="uint")
     ix = rng.integers(len(dataset))
+    rng.integers(2**64, size=51, dtype="uint")  # 20 34
+    torch.manual_seed(rng.integers(2**64, dtype="uint"))
     zoom = 0.75
     orig_im, _ = dataset.dataset[ix]
     (t_im1, t_im2), label = dataset[ix]
