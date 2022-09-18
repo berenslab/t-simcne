@@ -47,7 +47,7 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
     similarity = ax.annotate(txt_sim, (1, 0.5), **txtkwargs)
 
     z_aprops = aprops.copy()
-    rad = -np.pi / 6
+    rad = -np.pi / 8
     z_aprops["connectionstyle"] = f"arc3,rad={rad}"
     z_aprops["shrinkB"] = 12
 
@@ -216,6 +216,8 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
     z_aprops["shrinkA"] = z_aprops["shrinkB"]
     z_aprops["shrinkB"] = 1
     z_aprops["linewidth"] *= 1.5
+    rad = -0.2
+    z_aprops["connectionstyle"] = f"arc3,rad={rad}"
 
     # connect z_i to scatter plot
     annot1 = plt.Annotation(
@@ -230,7 +232,7 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
     ax_scatter.add_artist(annot1)
 
     # connect z_j to scatter plot
-    rad = -0.55
+    rad = 0.1
     z_aprops["connectionstyle"] = f"arc3,rad={rad}"
     annot2 = plt.Annotation(
         "",
