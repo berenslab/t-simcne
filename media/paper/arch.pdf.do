@@ -156,8 +156,9 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
     ax.add_artist(abox)
 
     augprops = aprops.copy()
-    augprops["shrinkA"] = 20
-    augprops["shrinkB"] = 20
+    augprops["connectionstyle"] = f"angle,angleA=90,angleB=180"
+    augprops["shrinkA"] = 15
+    augprops["shrinkB"] = 15
     ax.annotate(
         "",
         (0.2, 1),
@@ -175,24 +176,22 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
     t = txtkwargs.copy()
     t["usetex"] = False
     t["fontsize"] = "small"
+    t["transform"] = ax.transAxes
+    t["rotation_mode"] = "anchor"
+    t["horizontalalignment"] = "left"
     ax.text(
-        0.1,
-        0.25,
-        "data\naugmentation",
-        transform=ax.transAxes,
+        0,
+        0.15,
+        "data\naug-\nmentation",
         va="top",
-        rotation=-55,
-        rotation_mode="anchor",
+        ha="left",
         **t,
     )
     ax.text(
-        0.1,
-        0.75,
-        "data\naugmentation",
-        transform=ax.transAxes,
+        0,
+        0.85,
+        "data\naug.",
         va="bottom",
-        rotation=55,
-        rotation_mode="anchor",
         **t,
     )
     ax_scatter.scatter(
