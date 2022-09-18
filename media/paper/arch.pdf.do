@@ -407,9 +407,9 @@ def main():
     rng = np.random.default_rng(7961039361578664541)
     with plt.style.context(stylef):
         fig, axd = plt.subplot_mosaic(
-            [["arch", "emb"], ["arch", "loss"]],
-            gridspec_kw=dict(width_ratios=[0.75, 0.25]),
-            figsize=(5.5, 2),
+            [["arch", "emb", "loss"]],
+            gridspec_kw=dict(width_ratios=[3, 1, 1]),
+            figsize=(5.5, 1),
             constrained_layout=True,
         )
 
