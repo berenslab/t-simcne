@@ -7,9 +7,13 @@ from pathlib import Path
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import torch
 from cnexp import names, plot, redo
+from matplotlib.collections import PatchCollection
 from matplotlib.offsetbox import AnchoredText, AnnotationBbox, OffsetImage
+from matplotlib.patches import Polygon, Rectangle
+from torchvision import transforms
 from torchvision.transforms.functional import to_pil_image
 
 
@@ -33,9 +37,14 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
     # loss/similarity
     txt_sim = (
         r"$\displaystyle\frac{1}"
-        r"{1 + ||\mathbf{\mathrm{z}}_i - \mathbf{\mathrm{z}}_j||^2}$"
+        r"{1 + ||\mathrm{\mathbf{z}}_i - \mathrm{\mathbf{z}}_j||^2}$"
     )
-    txtkwargs = dict(usetex=True, fontsize="large", ha="center", va="center")
+    txtkwargs = dict(
+        usetex=True,
+        fontsize="large",
+        horizontalalignment="center",
+        verticalalignment="center",
+    )
     similarity = ax.annotate(txt_sim, (1, 0.5), **txtkwargs)
 
     z_aprops = aprops.copy()
@@ -44,7 +53,7 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
     z_aprops["shrinkB"] = 12
 
     # z_i -> similarity
-    txt_zi = r"$\mathbf{\mathrm{z}}_i$"
+    txt_zi = r"$\mathrm{\mathbf{z}}_i$"
     z_i = ax.annotate(
         txt_zi,
         similarity.xy,
@@ -57,7 +66,7 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
     # z_j -> similarity
     rad *= -1
     z_aprops["connectionstyle"] = f"arc3,rad={rad}"
-    txt_zj = r"$\mathbf{\mathrm{z}}_j$"
+    txt_zj = r"$\mathrm{\mathbf{z}}_j$"
     z_j = ax.annotate(
         txt_zj,
         similarity.xy,
@@ -70,7 +79,7 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
     h_aprops = aprops.copy()
 
     # h_i -> z_i
-    txt_hi = r"$\mathbf{\mathrm{h}}_i$"
+    txt_hi = r"$\mathrm{\mathbf{h}}_i$"
     h_i = ax.annotate(
         txt_hi,
         z_i.get_position(),
@@ -79,8 +88,18 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
         **txtkwargs,
         arrowprops=h_aprops,
     )
+    phead = r"proj.\thinspace head"
+    xmid = (z_i.get_position()[0] + 0.5) / 2
+    ax.annotate(
+        rf"{phead}($\mathrm{{\mathbf{{h}}}}_i$)",
+        (xmid, 1.01),
+        xycoords="axes fraction",
+        va="bottom",
+        **txtkwargs,
+    )
+
     # h_j -> z_j
-    txt_hj = r"$\mathbf{\mathrm{h}}_j$"
+    txt_hj = r"$\mathrm{\mathbf{h}}_j$"
     h_j = ax.annotate(
         txt_hj,
         z_j.get_position(),
@@ -89,13 +108,32 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
         arrowprops=h_aprops,
         **txtkwargs,
     )
+    xmid = (z_j.get_position()[0] + 0.5) / 2
+    ax.annotate(
+        rf"{phead}($\mathrm{{\mathbf{{h}}}}_j$)",
+        (xmid, 0.01),
+        xycoords="axes fraction",
+        va="bottom",
+        **txtkwargs,
+    )
 
     ix = rng.integers(len(dataset))
-    rng.integers(2**32, size=50)
     torch.manual_seed(rng.integers(2**64, dtype="uint"))
     zoom = 0.75
     orig_im, _ = dataset.dataset[ix]
     (t_im1, t_im2), label = dataset[ix]
+    mean = (0.4914, 0.4822, 0.4465)
+    std = (0.2023, 0.1994, 0.2010)
+    invnorm = transforms.Compose(
+        [
+            transforms.Normalize(
+                mean=[0.0, 0.0, 0.0], std=[1 / s for s in std]
+            ),
+            transforms.Normalize(mean=[-m for m in mean], std=[1.0, 1.0, 1.0]),
+        ]
+    )
+    t_im1 = invnorm(t_im1)
+    t_im2 = invnorm(t_im2)
 
     # img1 -> h_i
     im1 = OffsetImage(to_pil_image(t_im1), zoom=zoom)
@@ -104,26 +142,39 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
         h_i.get_position(),
         (0.2, 1),
         xycoords="axes fraction",
-        box_alignment=(0.5, 1),
+        # box_alignment=(0.5, 1),
         frameon=False,
         arrowprops=aprops,
     )
     ax.add_artist(abox1)
 
     # img2 -> h_j
-    pil_im = to_pil_image(t_im2)
-    eprint(pil_im)
-    im2 = OffsetImage(pil_im, zoom=zoom)
+    im2 = OffsetImage(to_pil_image(t_im2), zoom=zoom)
     abox2 = AnnotationBbox(
         im2,
         h_j.get_position(),
         (0.2, 0),
         xycoords="axes fraction",
-        box_alignment=(0.5, 0),
+        # box_alignment=(0.5, 0),
         frameon=False,
         arrowprops=aprops,
     )
     ax.add_artist(abox2)
+    xmid = (h_j.get_position()[0] + 0.2) / 2
+    ax.annotate(
+        r"\texttt{ResNet}($\cdot$)",
+        (xmid, 1.01),
+        xycoords="axes fraction",
+        va="bottom",
+        **txtkwargs,
+    )
+    ax.annotate(
+        r"\texttt{ResNet}($\cdot$)",
+        (xmid, 0.01),
+        xycoords="axes fraction",
+        va="bottom",
+        **txtkwargs,
+    )
 
     im = mpl.offsetbox.OffsetImage(orig_im, zoom=zoom)
     abox = mpl.offsetbox.AnnotationBbox(
@@ -135,8 +186,46 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
         arrowprops=aprops,
     )
     ax.add_artist(abox)
-    ax.arrow
 
+    augprops = aprops.copy()
+    augprops["shrinkA"] = 20
+    augprops["shrinkB"] = 20
+    ax.annotate(
+        "",
+        (0.2, 1),
+        (0.05, 0.5),
+        xycoords="axes fraction",
+        arrowprops=augprops,
+    )
+    ax.annotate(
+        "",
+        (0.2, 0),
+        (0.05, 0.5),
+        xycoords="axes fraction",
+        arrowprops=augprops,
+    )
+    t = txtkwargs.copy()
+    t["usetex"] = False
+    ax.text(
+        0.1,
+        0.25,
+        "data\naugmentation",
+        transform=ax.transAxes,
+        va="top",
+        rotation=-55,
+        rotation_mode="anchor",
+        **t,
+    )
+    ax.text(
+        0.1,
+        0.75,
+        "data\naugmentation",
+        transform=ax.transAxes,
+        va="bottom",
+        rotation=55,
+        rotation_mode="anchor",
+        **t,
+    )
     ax_scatter.scatter(
         [Y[ix, 0]], [Y[ix, 1]], c="black", marker="o", s=3, zorder=4
     )
@@ -157,6 +246,7 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
     z_aprops["color"] = "xkcd:light gray"
     z_aprops["linestyle"] = (0, (5, 5))  # dashed
     z_aprops["shrinkA"] = z_aprops["shrinkB"]
+    z_aprops["shrinkB"] = 1
     z_aprops["linewidth"] *= 1.5
 
     # connect z_i to scatter plot
@@ -172,7 +262,7 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
     ax_scatter.add_artist(annot1)
 
     # connect z_j to scatter plot
-    rad = -0.4
+    rad = -0.45
     z_aprops["connectionstyle"] = f"arc3,rad={rad}"
     annot2 = plt.Annotation(
         "",
@@ -185,11 +275,130 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
     )
     ax_scatter.add_artist(annot2)
 
+    bkwargs = dict(
+        edgecolor="xkcd:slate gray",
+        facecolor="xkcd:light gray",
+        linewidth=plt.rcParams["axes.linewidth"],
+    )
+    # resnet polygon
+    xy = np.array([[0.2, 0.25], [0.2, 0.75], [0.5, 0.65], [0.5, 0.35]])
+    resnet = Polygon(xy, closed=True, **bkwargs)
+    ax.text(*xy.mean(axis=0), r"\texttt{ResNet}", **txtkwargs)
+    ax.add_artist(resnet)
+
+    ph_props = aprops.copy()
+    ph_props["shrinkB"] = 1
+    ph_props["shrinkA"] = 5
+    t = txtkwargs.copy()
+    t.update(
+        color="xkcd:slate gray",
+        va="bottom",
+        ha="left",
+        rotation=-90,
+        rotation_mode="anchor",
+        fontsize="small",
+    )
+    # projection head polygon
+    layerwidth = 0.015
+    r3height = 0.1
+    x = 0.55
+    dx = 0.075
+    r1 = Rectangle((x, 0.35), layerwidth, 0.3)
+    ax.text(
+        x + layerwidth + 0.0025,
+        0.65,
+        r"\texttt{512D}",
+        **t,
+    )
+    x += dx
+    r2 = Rectangle((x, 0.25), layerwidth, 0.5)
+    ax.annotate("", (x, 0.5), (x - dx, 0.5), arrowprops=ph_props)
+    ax.text(
+        x + layerwidth + 0.0025,
+        0.75,
+        r"\texttt{1024D}",
+        **t,
+    )
+    x += dx
+    r3 = Rectangle((x, 0.5 - r3height / 2), layerwidth, r3height)
+    ax.annotate("", (x, 0.5), (x - dx, 0.5), arrowprops=ph_props)
+    ax.text(
+        x + layerwidth + 0.0025,
+        0.55,
+        r"\texttt{2D}",
+        **t,
+    )
+
+    pc = PatchCollection([r1, r2, r3], **bkwargs)
+    t = txtkwargs.copy()
+    t["usetex"] = False
+    ax.text(
+        x - dx,
+        0.225,
+        r"proj. head",
+        transform=ax.transAxes,
+        **t,
+        va="top",
+    )
+    ax.add_collection(pc)
+
 
 def draw_losses(ax, losses):
-    ax.plot(losses)
-    ax.set_xlabel("epoch")
+    loss = losses["mean"]
+    ax.plot(loss)
+    ax.set_xlabel("epoch", labelpad=0)
     ax.set_ylabel("loss")
+    ax.tick_params("both", labelsize="x-small")
+    ax.spines.bottom.set_bounds(0, 1500)
+    ax.spines.left.set_bounds(loss.min(), loss.max())
+
+    kwargs = dict(
+        linewidth=plt.rcParams["axes.linewidth"],
+        color="xkcd:light gray",
+        linestyle="dashed",
+        zorder=1,
+    )
+    txtkwargs = dict(
+        fontsize="small",
+        multialignment="center",
+        verticalalignment="top",
+        horizontalalignment="center",
+    )
+    ax.annotate(
+        "default training\nin 128D",
+        (500, 1),
+        xycoords=("data", "axes fraction"),
+        **txtkwargs,
+    )
+
+    ax.axvline(1000, **kwargs)
+
+    ax.axvline(1050, **kwargs)
+    ax.annotate(
+        "finetuning\nin 2D",
+        (1050 + 450 / 2, 1),
+        xycoords=("data", "axes fraction"),
+        **txtkwargs,
+    )
+
+    txtkwargs["fontsize"] = "x-small"
+    aprops = dict(
+        # arrowstyle="-[,widthB=0.5",
+        arrowstyle="-|>",
+        connectionstyle="arc3,rad=-0.55",
+        color="xkcd:dark gray",
+        linewidth=plt.rcParams["axes.linewidth"],
+        relpos=(1, 0.5),
+        shrinkB=4,
+    )
+
+    ax.annotate(
+        "linear layer\nfinetuning",
+        (1025, loss[1025]),
+        (500, 5),
+        arrowprops=aprops,
+        **txtkwargs,
+    )
 
 
 def main():
@@ -213,8 +422,11 @@ def main():
     # correct embedding is loaded in Y.
     Y = np.load("seed-3118/cifar.npy")
     labels = np.load("seed-3118/labels.npy")
+    losses = pd.read_csv("seed-3118/losses.csv")
 
-    rng = np.random.default_rng(235997313216654)
+    # gives a blue car with greyscale, flipping, and cropping
+    # transformation.
+    rng = np.random.default_rng(871301915131659)
     with plt.style.context(stylef):
         fig, axd = plt.subplot_mosaic(
             [["arch", "emb"], ["arch", "loss"]],
@@ -231,16 +443,15 @@ def main():
             Y[:, 1],
             c=labels,
             alpha=0.5,
-            # buggy if I rasterize?
             rasterized=True,
         )
         # add_scalebar_frac(ax)
         ax.set_axis_off()
         ax.axis("equal")
 
-        draw_losses(axd["loss"], np.linspace(7.6, 2.0, 1500))
+        draw_losses(axd["loss"], losses)
         plot.add_letters(axd.values())
-        # plot.add_lettering(axd["arch"], "a")
+
     metadata = plot.get_default_metadata()
     metadata["Title"] = "Architecture for contrastive visualization"
     fig.savefig(sys.argv[3], format="pdf", metadata=metadata)
