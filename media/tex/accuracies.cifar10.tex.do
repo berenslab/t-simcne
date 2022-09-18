@@ -56,12 +56,17 @@ def transl(key: str) -> str:
         "knn[Z]": "$k$NN in $Z$",
         "loss": "Loss",
         "time[s]": "Time",
+        "euclidean": "Euc.",
+        "cosine": "Cos.",
+        "ft": "Fine-tun.",
     }
     if key.startswith("time"):
         unit = re.match(r"time\[(\w+)\]", key)[1]
-        return f"Time ({unit})"
-    else:
+        return f"Time ({unit}.)"
+    elif key in tr:
         return tr[key]
+    else:
+        return key.capitalize()
 
 
 def main():
@@ -70,7 +75,7 @@ def main():
 
     df: pd.DataFrame = pd.read_csv(fname)
 
-    colkeys = ["lin[H]", "knn[Z]", "loss", "time[hr]"]
+    colkeys = ["lin[H]", "knn[euc, Z]", "loss", "time[hr]"]
     df["time[hr]"] = df["time[s]"] / (60 * 60)
     assert all(key in df.columns for key in colkeys)
 
@@ -105,7 +110,7 @@ def main():
         for (metric, out_dim, n_epoch), df1 in dfg:
             # desc = metric.capitalize() + f" {out_dim}D ({n_epoch} epochs)"
             # f.write(desc)
-            f.write(f"{metric.capitalize()} & {out_dim} & {n_epoch}")
+            f.write(f"{transl(metric)} & {out_dim} & {n_epoch}")
 
             for key in colkeys:
                 mean = df1[key].mean()
@@ -116,7 +121,7 @@ def main():
                     std *= 100
                     f.write(rf"& ${mean:.1f}\pm{std:.1f}\%$ ")
                 else:
-                    f.write(rf"& ${mean:.1f}\pm{std:.1f}$ ")
+                    f.write(rf"& ${mean:.1f}\pm{std:.0f}$ ")
             tblnl()
 
         f.write(r"\bottomrule")
@@ -135,6 +140,10 @@ def main():
             [c for c in ms_df.columns if c not in append]
             + [c for c in ms_df.columns if c in append]
         ]
+
+        ms_df.to_string(f)
+        nl()
+        nl()
         ms_df.T.to_string(f)
         nl()
 
