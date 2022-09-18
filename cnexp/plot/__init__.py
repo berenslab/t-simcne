@@ -3,6 +3,10 @@ import subprocess
 
 import numpy as np
 
+from .scalebar import add_scalebar_frac
+
+__export__ = [add_scalebar_frac]
+
 
 def get_default_metadata():
     meta = dict(
