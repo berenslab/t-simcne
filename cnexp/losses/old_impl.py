@@ -28,12 +28,15 @@ class ContrastiveLoss(torch.nn.Module):
         self.neigh_inds = None
         self.loss_aggregation = loss_aggregation
 
+        if self.loss_mode == "nce":
+            self.log_Z = torch.tensor(0.0)
+            self.log_Z = torch.nn.Parameter(self.log_Z, requires_grad=True)
+
     def forward(
         self,
         features,
         backbone_features=None,
         labels=None,
-        log_Z=None,
         force_resample=False,
     ):
         """Compute loss for model. SimCLR unsupervised loss:
@@ -41,7 +44,6 @@ class ContrastiveLoss(torch.nn.Module):
 
         Args:
             features: hidden vector of shape [2 * bsz, n_views, ...].
-            log_Z: scalar, logarithm of the learnt normalization constant for nce.
             force_resample: Whether the negative samples should be forcefully resampled.
         Returns:
             A loss scalar.
@@ -61,7 +63,9 @@ class ContrastiveLoss(torch.nn.Module):
             self.neigh_inds = neigh_inds
         # untested logic to accomodate for last batch
         elif self.neigh_inds.shape[0] != batch_size:
-            neigh_inds = make_neighbor_indices(batch_size, negative_samples)
+            neigh_inds = make_neighbor_indices(
+                batch_size, negative_samples, device=features.device
+            )
             # don't save this one
         else:
             neigh_inds = self.neigh_inds
@@ -92,6 +96,8 @@ class ContrastiveLoss(torch.nn.Module):
 
         # compute loss
         if self.loss_mode == "nce":
+            self.log_Z.to(features.device)
+
             # for proper nce it should be negative_samples *
             # p_noise. But for uniform noise distribution we would
             # need the size of the dataset here. Also, we do not use a
@@ -104,10 +110,12 @@ class ContrastiveLoss(torch.nn.Module):
                 # / ( 1 + (d**2 + eps) * Z * m)
                 estimator = 1 / (
                     1
-                    + (dists + self.eps) * torch.exp(log_Z) * negative_samples
+                    + (dists + self.eps)
+                    * torch.exp(self.log_Z)
+                    * negative_samples
                 )
             else:
-                probits = probits / torch.exp(log_Z)
+                probits = probits / torch.exp(self.log_Z)
                 estimator = probits / (probits + negative_samples)
 
             loss = -(~neigh_mask * torch.log(estimator)) - (
