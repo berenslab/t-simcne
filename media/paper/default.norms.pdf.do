@@ -25,7 +25,7 @@ def plot_norms(path, axs, titles, rng):
 
     # redo.redo_ifchange(path / "intermediates.zip")
 
-    with zipfile.ZipFile(path / "intermediates.zip") as zipf:
+    with zipfile.ZipFile(path / "out/intermediates.zip") as zipf:
         with zipf.open("labels.npy") as f:
             labels = np.load(f)
 
@@ -74,12 +74,12 @@ def main():
         euclidean=prefix / names.default_train(),
         cosine=prefix / names.default_train(metric="cosine"),
     )
-    redo.redo_ifchange_slurm(
-        [d / "default.run" for d in default.values()],
-        name="norms",
-        time_str="18:30:00",
-        partition="gpu-2080ti-preemptable",
-    )
+    # redo.redo_ifchange_slurm(
+    #     [d / "default.run" for d in default.values()],
+    #     name="norms",
+    #     time_str="18:30:00",
+    #     partition="gpu-2080ti-preemptable",
+    # )
     redo.redo_ifchange(
         [
             stylef,
@@ -93,20 +93,22 @@ def main():
     with plt.style.context(stylef):
         # maybe rearrange to all be in one line?
         fig, axs = plt.subplots(
-            nrows=2,
-            ncols=2,
-            figsize=(2.25, 2.25),
+            nrows=1,
+            ncols=4,
+            figsize=(5.5, 5.5 / 4),
             sharex=True,
             constrained_layout=True,
         )
         titles = ["H", "Z"]
-        for ax, (k, v) in zip(axs, default.items()):
-            plot_norms(v, ax, [f"{k} {t}" for t in titles], rng=rng)
+        for ax, (k, v) in zip(axs.reshape(2, 2), default.items()):
+            plot_norms(
+                v, ax, [f"{k.capitalize()} ${t}$" for t in titles], rng=rng
+            )
         # plot_norms(default["euclidean"], axs[1], titles, rng=rng)
 
         add_letters(axs)
-        [ax.set(xlabel=None) for ax in axs[:-1, :].flat]
-        [ax.set(ylabel=None) for ax in axs[:, 1:].flat]
+        # [ax.set(xlabel=None) for ax in axs[:-1, :].flat]
+        [ax.set(ylabel=None) for ax in axs[1:]]
 
     metadata = get_default_metadata()
     metadata[
