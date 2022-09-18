@@ -92,9 +92,16 @@ def main():
             f"filename, got {len(parts)} parts in {sys.argv[2]!r}"
         )
 
+    name = sys.argv[2][: -(1 + len(dataset))]
+    if name == "infonce":
+        name_ = "ince"
+    elif name == "neg_sample":
+        name_ = "neg"
+    else:
+        name_ = name
+
     negative_samples = [2, 16, 128, 512, 2048]
     runs = []
-    name = sys.argv[2][: -(1 + len(dataset))]
     names = []
     partitions = []
     params = dict(
@@ -109,9 +116,9 @@ def main():
     seeds = [None, *rng.integers(10_000, size=2)]
     prefix = root / dataset / "dl"
 
-    for i, (m, seed) in enumerate(itertools.product(negative_samples, seeds)):
+    for m, (i, seed) in itertools.product(negative_samples, enumerate(seeds)):
 
-        loss_str = f"closs:loss_name={loss}:negative_samples={m}"
+        loss_str = f"closs:loss_mode={loss}:negative_samples={m}"
         spec = expnames.default_train(
             metric="cosine",
             loss=loss_str,
@@ -120,15 +127,16 @@ def main():
         p = prefix / spec
 
         runs.append(p)
-        names.append(f"{name}-{m}-{i + 1}")
+        names.append(f"{name_}-{m}-{i + 1}")
         params["path"].append(p)
         params["key"].append(name)
         params["seed"].append(seed)
         params["loss"].append(loss)
         params["negative_samples"].append(m)
 
-        gpu = "2080ti" if m < 32 else "v100"
-        partitions.append(f"gpu-{gpu}")
+        # closs needs more memory
+        gpu = "2080ti" if m <= 128 else "v100"
+        partitions.append(f"gpu-{gpu}-preemptable")
 
     # those times are for cifar10, so this might need to be adjusted
     # for a more complicated dataset.
@@ -153,10 +161,16 @@ def main():
         "expected runs to not overlap after "
         f"{prefix = }, but got {commonpath = }"
     )
-    redo.redo_ifchange([prefix / "dataset.pt"])
+    redo.redo_ifchange(
+        [
+            r.parent / f
+            for r in runs
+            for f in ["model.pt", "criterion.pt", "dataset.pt"]
+        ]
+    )
     redo.redo_ifchange_slurm(
         [r / "default.run" for r in runs],
-        partition=f"gpu-{gpu}",
+        partition=partitions,
         time_str=t_str,
         name=names,
     )
