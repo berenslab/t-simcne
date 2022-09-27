@@ -428,6 +428,14 @@ def main():
             rasterized=True,
         )
         ax.text(0.33, 1, "CIFAR-10", transform=ax.transAxes, va="top")
+        ax.text(
+            0.5,
+            0.05,
+            "airplanes",
+            transform=ax.transAxes,
+            va="bottom",
+            fontsize="small",
+        )
         # add_scalebar_frac(ax)
         ax.set_axis_off()
         ax.margins(0)
