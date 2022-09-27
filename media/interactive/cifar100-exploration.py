@@ -22,9 +22,19 @@ def main():
     data_sd = torch.load("experiments/cifar/dataset.pt")
     dataset = data_sd["full_plain"].dataset
     arr = GetFirst(dataset)
-    prefix = Path("media/paper/seed-3118")
-    Y = np.load(prefix / "cifar.npy")
-    labels = np.load(prefix / "labels.npy")
+    # prefix = Path.home() / "tmp"
+    # prefix = Path("media/paper/seed-3118")
+    # Y = np.load(prefix / "cifar.npy")
+    # labels = np.load(prefix / "labels.npy")
+
+    # cifar100
+    # get the underlying dataset without augmentations.
+    data_sd = torch.load("experiments/cifar100/dataset.pt")
+    dataset = data_sd["full_plain"].dataset
+    arr = GetFirst(dataset)
+    npz = np.load("media/experimental/c100_emb.npz")
+    Y = npz["data"]
+    labels = npz["labels"]
 
     plt.style.use("media/project.mplstyle")
     fig, ax = plt.subplots()
@@ -51,7 +61,6 @@ def main():
         if scatter.contains(event)[0]:
             # find out the index within the array from the event
             ind = scatter.contains(event)[1]["ind"][0]
-            print(ind)
             # get the figure size
             w, h = fig.get_size_inches() * fig.dpi
             ws = (event.x > w / 2.0) * -1 + (event.x <= w / 2.0)
