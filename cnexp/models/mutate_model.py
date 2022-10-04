@@ -30,13 +30,11 @@ def mutate_model(
         if freeze == "backbone":
             model.backbone.requires_grad_(False)
             model.projection_head.requires_grad_(True)
-        # elif freeze == "thaw_llin":
-        #     # unfreeze the last linear layer.  This shouldn't really
-        #     # be necessary, since introducing the new linear layer
-        #     # with the `change='lastlin'` parameter will already
-        #     # require a gradient.
-        #     model.requires_grad_(False)
-        #     model.projection_head.layers[-1].requires_grad_(True)
+        elif freeze == "thaw_lastlin":
+            # unfreeze the last linear layer.  Useful for finetuning
+            # the same model on a different loss.
+            model.requires_grad_(False)
+            model.projection_head.layers[-1].requires_grad_(True)
         else:
             model.requires_grad_(not freeze)
 
