@@ -1,13 +1,46 @@
 import contextlib
 import inspect
 
-from torch.utils.data import ConcatDataset
-
 import medmnist
+from torch.utils.data import ConcatDataset
+from torchvision import transforms
 
-from ..imagedistortions import TransformedPairDataset, get_transforms
+from ..imagedistortions import TransformedPairDataset
 from .base import DatasetBase
-from .load_torchvision_dataset import load_torchvision_dataset
+
+
+def get_transforms(mean, std, size, setting):
+    normalize = transforms.Normalize(mean=mean, std=std)
+
+    if setting == "contrastive":
+        return transforms.Compose(
+            [
+                transforms.RandomRotation(180),
+                transforms.RandomResizedCrop(size=size, scale=(0.2, 1.0)),
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomGrayscale(p=0.05),
+                transforms.ToTensor(),
+                normalize,
+            ]
+        )
+    elif setting == "train_linear_classifier":
+        return transforms.Compose(
+            [
+                transforms.RandomResizedCrop(size=size, scale=(0.2, 1.0)),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                normalize,
+            ]
+        )
+    elif setting == "test_linear_classifier":
+        return transforms.Compose(
+            [
+                transforms.ToTensor(),
+                normalize,
+            ]
+        )
+    else:
+        raise ValueError(f"Unknown transformation setting {setting!r}")
 
 
 def load_dermamnist(**kwargs):
