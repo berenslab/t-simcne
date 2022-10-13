@@ -69,8 +69,9 @@ def main():
     prefix = root / sys.argv[2] / "dl"
     stylef = "../project.mplstyle"
 
-    default = prefix / names.default_train()
-    ft = default / names.finetune()
+    seed = None
+    default = prefix / names.default_train(random_state=seed)
+    ft = default / names.finetune(random_state=seed)
     # redo.redo_ifchange_slurm(
     #     ft / "default.run",
     #     name="ftstages",
@@ -94,7 +95,7 @@ def main():
             constrained_layout=True,
         )
         titles = [
-            "Before optimization",
+            "Before fine-tuning",
             "Linear fine-tuning",
             "Final fine-tuning",
         ]
