@@ -69,6 +69,16 @@ def add_cifar100_legend(ax, cmap="tab20"):
             " ".join(words[i : i + span]) for i in range(0, len(words), span)
         ]
         name_fmt = "\n".join(wordpairs)
+
+        # break up long words
+        if name_fmt == "medium-sized mammals":
+            name_fmt = "medium-sized\nmammals"
+        elif name_fmt == "non-insect invertebrates":
+            name_fmt = "non-insect\ninvertebrates"
+        elif name_fmt == "household furniture":
+            name_fmt = "household\nfurniture"
+        elif name_fmt == "household electrical\ndevices":
+            name_fmt = "household elec-\ntrical devices"
         names.append(name_fmt)
 
     markers = [
@@ -87,9 +97,11 @@ def add_cifar100_legend(ax, cmap="tab20"):
     legend = ax.legend(
         handles=markers,
         ncol=2,
-        fontsize=3,
+        fontsize="small",
         loc="center",
         handletextpad=0.1,
+        columnspacing=0,
+        borderaxespad=0,
     )
     legend.get_frame().set_linewidth(0.4)
     return legend
@@ -112,11 +124,16 @@ def main():
         ft_euc=prefix / names.default_train() / names.finetune(),
     )
     titles = dict(
-        euc="Trained from scratch\n",
-        euc_5k="Euclidean 5000 epochs",
+        euc="Euclidean",
+        euc_5k="Euclidean (5000 epochs)",
         cos="Cosine",
-        ft_euc="Fine-tuned\n",
-        ft_cos="Fine-tuned\nfrom default SimCLR",
+        ft_euc=r"Euclidean $\to$ Euclidean",
+        ft_cos=r"Cosine $\to$ Euclidean",
+        # euc="Trained from scratch\n",
+        # euc_5k="Euclidean 5000 epochs",
+        # cos="Cosine",
+        # ft_euc="Fine-tuned\n",
+        # ft_cos="Fine-tuned\nfrom default SimCLR",
     )
     redo.redo_ifchange(prefix / "dataset.pt")
     redo.redo_ifchange_slurm(
