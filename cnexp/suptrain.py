@@ -62,3 +62,37 @@ class SupervisedTraining(TrainBase):
             text,
             lambda f, d: f.write(d),
         )
+
+
+class SupervisedFullTraining(TrainBase):
+    def __init__(
+        self, path, model_save_freq=1000, embedding_save_freq=1000, **kwargs
+    ):
+        super().__init__(
+            path,
+            model_save_freq=model_save_freq,
+            embedding_save_freq=embedding_save_freq,
+            **kwargs,
+        )
+
+    def load(self):
+        super().load()
+
+        self.save_dir.mkdir(exist_ok=True)
+        self.dataloader = self.dataset_dict["train_augmented_loader"]
+        self.dataloader_test = self.dataset_dict["test_linear_loader"]
+
+    def compute(self):
+        super().compute()  # fits the model
+
+        self.acc = eval_model(self.model, self.dataloader_test, **self.kwargs)
+
+    def save(self):
+        super().save()
+
+        text = bytes(f"{self.acc}\n", encoding="utf8")
+        self.save_lambda(
+            self.outdir / "score.txt",
+            text,
+            lambda f, d: f.write(d),
+        )

@@ -103,6 +103,10 @@ def resolve_class(name):
         from .suptrain import SupervisedTraining as ST
 
         return ST
+    elif name == "suptrain2":
+        from .suptrain import SupervisedFullTraining as SFT
+
+        return SFT
     elif name == "lin":
         from .eval.linear import LinearAcc
 
