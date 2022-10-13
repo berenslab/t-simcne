@@ -7,9 +7,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-from cnexp import names, redo
-from cnexp.plot import add_letters, get_default_metadata
-from cnexp.plot.scalebar import add_scalebar_frac
+from cnexp import names, plot, redo
 
 
 def load(dir, extract_name="embeddings/post.npy"):
@@ -43,12 +41,13 @@ def main():
     redo.redo_ifchange(
         [
             stylef,
-            inspect.getfile(add_scalebar_frac),
-            inspect.getfile(add_letters),
+            inspect.getfile(plot.add_scalebar_frac),
+            inspect.getfile(plot),
             inspect.getfile(names),
         ]
     )
 
+    anchor = load(paths[-1])
     labels = load(paths[0], "labels.npy")
 
     with plt.style.context(stylef):
@@ -59,14 +58,15 @@ def main():
         )
         for seed, path, ax in zip(seeds, paths, axs):
             ar = load(path)
+            ar = plot.flip_maybe(ar, anchor=anchor)
             ax.scatter(
                 ar[:, 0], ar[:, 1], c=labels, alpha=0.5, rasterized=True
             )
-            add_scalebar_frac(ax)
+            plot.add_scalebar_frac(ax)
 
-        add_letters(axs)
+        plot.add_letters(axs)
 
-    metadata = get_default_metadata()
+    metadata = plot.get_default_metadata()
     metadata["Title"] = (
         f"The same visualization of the {sys.argv[2]} dataset "
         f" with {len(seeds)} different seeds"
