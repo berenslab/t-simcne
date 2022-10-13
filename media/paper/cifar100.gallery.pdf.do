@@ -134,9 +134,10 @@ def main():
         ]
     )
 
-    labels = load(pdict["ft_euc"], "labels.npy")
-    labels = [fine_to_coarse(lbl) for lbl in labels]
+    labels_fine = load(pdict["ft_euc"], "labels.npy")
+    labels = [fine_to_coarse(lbl) for lbl in labels_fine]
 
+    seed = 44
     with plt.style.context(stylef):
         fig, axs = plt.subplots(
             nrows=1,
@@ -156,6 +157,23 @@ def main():
             )
             add_scalebar_frac(ax)
             ax.set_title(titles[key])
+
+            from cnexp.eval.knn import knn_acc
+            from sklearn.model_selection import train_test_split
+
+            split = train_test_split(
+                ar, labels, test_size=10000, stratify=labels, random_state=seed
+            )
+            knn1 = knn_acc(*split, metric="euclidean")
+            split = train_test_split(
+                ar,
+                labels_fine,
+                test_size=10000,
+                stratify=labels_fine,
+                random_state=seed,
+            )
+            knn2 = knn_acc(*split, metric="euclidean")
+            print(f"{key:15s}: {knn1:.0%}, {knn2:.0%}", file=sys.stderr)
 
         add_letters(axs[:-1])
 
