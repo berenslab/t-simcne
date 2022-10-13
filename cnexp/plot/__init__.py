@@ -27,6 +27,25 @@ def get_default_metadata():
     return meta
 
 
+def flip_maybe(
+    other,
+    *,
+    anchor,
+    return_anchor=False,
+):
+    """flip `other` along x- or y-axis, depending on covariance to `anchor`."""
+
+    flipx = np.cov(anchor[:, 0], other[:, 0])[0, 1]
+    flipy = np.cov(anchor[:, 1], other[:, 1])[0, 1]
+
+    flip = np.sign([flipx, flipy], dtype=other.dtype)
+
+    if return_anchor:
+        return anchor, other * flip
+    else:
+        return other * flip
+
+
 def get_lettering_fprops():
     return dict(
         fontsize="x-large",
