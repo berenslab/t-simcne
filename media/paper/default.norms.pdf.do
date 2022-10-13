@@ -13,14 +13,7 @@ from cnexp.plot.scalebar import add_scalebar_frac
 
 
 def plot_norms(path, axs, titles, rng):
-    """Plot the three stages within ft_path
-
-    Plots the different stages of training for finetuning.  (1) just
-    after changing the last layer to 2D, before starting the
-    optimization.  (2) after optimizing the last linear layer only.
-    (3) after optimizing the entire network.
-
-    """
+    """Plot the L2 norms of the embedding"""
     assert len(axs) == len(titles)
 
     # redo.redo_ifchange(path / "intermediates.zip")
@@ -34,8 +27,9 @@ def plot_norms(path, axs, titles, rng):
         with zipf.open("backbone_embeddings/post.npy") as f:
             H = np.load(f).astype(float)
 
+    layers = [Z]
     scatters = []
-    for ax, ar, title in zip(axs, [H, Z], titles):
+    for ax, ar, title in zip(axs, layers, titles):
         norms = (ar**2).sum(1) ** 0.5
         sc = ax.scatter(
             rng.normal(labels, 0.125),
