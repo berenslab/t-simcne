@@ -14,7 +14,7 @@ def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
 
-def do_pca(data, seed, n_components=50, **kwargs):
+def do_pca(data, seed, n_components=2, **kwargs):
     pca = PCA(random_state=seed, n_components=n_components, **kwargs)
     return pca.fit_transform(data)
 
