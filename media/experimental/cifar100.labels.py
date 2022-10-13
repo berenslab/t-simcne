@@ -10,12 +10,14 @@ def main():
     Y -= Y.mean(0)
     Y[:, 0] += 30
     # Y[:, 1] += -10
-    # print(Y.mean(0))
+    print(Y.min(0), Y.max(0), Y.mean(0))
 
     labels = npz["labels"]
     names = npz["names"]
 
-    fig, ax = plt.subplots(figsize=(3, 3), dpi=450, constrained_layout=True)
+    fig, ax = plt.subplots(
+        figsize=(3.5, 3.5), dpi=450, constrained_layout=True
+    )
 
     cm = plt.get_cmap("tab10", lut=names.shape[0])
     ax.scatter(
@@ -41,23 +43,21 @@ def main():
         kde = gaussian_kde(Ym.T)
         locs[i, :] = Ym[kde(Ym.T).argmax()]
 
-    norm = (locs**2).sum(1) ** 0.5
-    circ = locs / norm[:, None]
-    zs = circ[:, 0] + 1j * circ[:, 1]
+    zs = locs[:, 0] + 1j * locs[:, 1]
     ixs = np.argsort(np.angle(zs))
 
     for i, ix in enumerate(ixs):
         slot = slots[i]
         loc = locs[ix]
         title = names[ix].replace("_", " ")
-        z = 1.1 * Y.max() * (np.cos(slot) + 1j * np.sin(slot))
+        z = 1.05 * np.abs(Y).max() * (np.cos(slot) + 1j * np.sin(slot))
         ax.plot(
             [loc[0], np.real(z)],
             [loc[1], np.imag(z)],
-            c="xkcd:light gray",
+            c="xkcd:slate gray",
             # c=cm(ix),
             zorder=0.9,
-            lw=0.2,
+            linewidth=0.2,
         )
         ang = slot * 180 / np.pi
         ha = "left" if -90 < ang < 90 else "right"

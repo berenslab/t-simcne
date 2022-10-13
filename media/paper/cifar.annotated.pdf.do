@@ -20,8 +20,8 @@ def eprint(*args, **kwargs):
 
 subclusters = {
     "duplicate cars": (-519, -174, -113, 0),
-    "metallic cars": (-482, -204, -100, 150),
     "colorful cars": (-438, -244, -150, -50),
+    "metallic cars": (-482, -204, -150, 105),
     "firetrucks": (-361, -209, -40, 155),
     "sailboats": (-213, -194, -20, 140),
     "boats (aerial view)": (-242, -244, -150, -75),
@@ -42,6 +42,8 @@ subclusters = {
     "frogs, white background": (185, -65, 108, -115),
     "croaking frogs": (132, 10, 161, -110),
     # "frogs, grass": (147, -14),
+    # -415, -175 (alternative, if placed higher
+    "red cars": (-410, -175, -190, 150),
 }
 
 
@@ -80,6 +82,10 @@ def annotate_cifar(ax, Y, dataset, arrowprops=None):
         )
         if key == "frogs, white background":
             abox._arrow_relpos = (0, 1)
+        elif key == "croaking frogs":
+            abox._arrow_relpos = (0, 1)
+        elif key == "metallic cars":
+            abox._arrow_relpos = (1, 0.5)
         else:
             pass
         ax.add_artist(abox)
@@ -105,8 +111,9 @@ def main():
 
     # those might not exist on another computer, so check that the
     # correct embedding is loaded in Y.
-    Y = np.load(Path.home() / "tmp/cifar.3118.npy")
-    labels = np.load(Path.home() / "tmp/labels.npy")
+    p = Path("seed-3118")
+    Y = np.load(p / "cifar.npy")
+    labels = np.load(p / "labels.npy")
 
     with plt.style.context(stylef):
         fig, ax = plt.subplots(
@@ -118,10 +125,15 @@ def main():
             Y[:, 1],
             c=labels,
             alpha=0.5,
-            # buggy if I rasterize
-            # rasterized=True,
+            rasterized=True,
         )
-        add_scalebar_frac(ax)
+        # buggy if I don't have un-rasterized points
+        ax.scatter(
+            Y[:5][:, 0],
+            Y[:5][:, 1],
+            c=labels[:5],
+            alpha=0.5,
+        )
         annotate_cifar(ax, Y, dataset)
 
         classes = dataset.datasets[0].classes
@@ -142,11 +154,12 @@ def main():
         legend = ax.legend(
             handles=markers,
             ncol=2,
-            fontsize="small",
+            fontsize="medium",
             loc="upper left",
             handletextpad=0.1,
         )
         legend.get_frame().set_linewidth(plt.rcParams["axes.linewidth"])
+        add_scalebar_frac(ax)
 
     metadata = get_default_metadata()
     metadata["Title"] = "Annotated subclusters of cifar10"

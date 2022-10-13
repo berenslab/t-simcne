@@ -24,6 +24,9 @@ def eprint(*args, **kwargs):
 def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
     ax.set_axis_off()
 
+    upper_row = 0.875
+    lower_row = 0.125
+
     aprops = dict(
         arrowstyle="-|>",
         color="xkcd:dark gray",
@@ -44,7 +47,7 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
         horizontalalignment="center",
         verticalalignment="center",
     )
-    similarity = ax.annotate(txt_sim, (1, 0.5), **txtkwargs)
+    similarity = ax.annotate(txt_sim, (0.9, 0.5), **txtkwargs)
 
     z_aprops = aprops.copy()
     rad = -np.pi / 8
@@ -56,7 +59,7 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
     z_i = ax.annotate(
         txt_zi,
         similarity.xy,
-        (0.75, 1),
+        (0.65, upper_row),
         xycoords="axes fraction",
         arrowprops=z_aprops,
         **txtkwargs,
@@ -69,7 +72,7 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
     z_j = ax.annotate(
         txt_zj,
         similarity.xy,
-        (0.75, 0),
+        (0.65, lower_row),
         xycoords="axes fraction",
         arrowprops=z_aprops,
         **txtkwargs,
@@ -82,7 +85,7 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
     h_i = ax.annotate(
         txt_hi,
         z_i.get_position(),
-        (0.5, 1),
+        (0.5, upper_row),
         xycoords="axes fraction",
         **txtkwargs,
         arrowprops=h_aprops,
@@ -93,15 +96,16 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
     h_j = ax.annotate(
         txt_hj,
         z_j.get_position(),
-        (0.5, 0),
+        (0.5, lower_row),
         xycoords="axes fraction",
         arrowprops=h_aprops,
         **txtkwargs,
     )
-    xmid = (z_j.get_position()[0] + 0.5) / 2
 
-    torch.manual_seed(rng.integers(2**64, dtype="uint"))
+    rng.integers(2**64, dtype="uint")
     ix = rng.integers(len(dataset))
+    rng.integers(2**64, size=51, dtype="uint")  # 20 34
+    torch.manual_seed(rng.integers(2**64, dtype="uint"))
     zoom = 0.75
     orig_im, _ = dataset.dataset[ix]
     (t_im1, t_im2), label = dataset[ix]
@@ -123,7 +127,7 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
     abox1 = AnnotationBbox(
         im1,
         h_i.get_position(),
-        (0.2, 1),
+        (0.2, upper_row),
         xycoords="axes fraction",
         # box_alignment=(0.5, 1),
         frameon=False,
@@ -136,7 +140,7 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
     abox2 = AnnotationBbox(
         im2,
         h_j.get_position(),
-        (0.2, 0),
+        (0.2, lower_row),
         xycoords="axes fraction",
         # box_alignment=(0.5, 0),
         frameon=False,
@@ -161,14 +165,14 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
     augprops["shrinkB"] = 15
     ax.annotate(
         "",
-        (0.2, 1),
+        (0.2, upper_row),
         (0.05, 0.5),
         xycoords="axes fraction",
         arrowprops=augprops,
     )
     ax.annotate(
         "",
-        (0.2, 0),
+        (0.2, lower_row),
         (0.05, 0.5),
         xycoords="axes fraction",
         arrowprops=augprops,
@@ -181,17 +185,16 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
     t["horizontalalignment"] = "left"
     ax.text(
         0,
-        0.15,
-        "data\naug-\nmentation",
-        va="top",
-        ha="left",
+        0,
+        "data aug-\nmentation",
+        va="bottom",
         **t,
     )
     ax.text(
         0,
-        0.85,
-        "data\naug.",
-        va="bottom",
+        1,
+        "data aug-\nmentation",
+        va="top",
         **t,
     )
     ax_scatter.scatter(
@@ -267,7 +270,7 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
         color="xkcd:slate gray",
         va="bottom",
         ha="center",
-        fontsize="small",
+        fontsize="medium",
         usetex=False,
     )
 
@@ -280,7 +283,7 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
 
     # projection head polygon
     layerwidth = 0.015
-    dx = 0.125 - layerwidth / 2
+    dx = 0.075 - layerwidth / 2
     x = 0.5 + dx
     ax.annotate("", (x, 0.5), (0.5 - layerwidth, 0.5), arrowprops=ph_props)
     hidden_layer = Rectangle((x, 0.25), layerwidth, 0.5)
@@ -318,13 +321,17 @@ def draw_arch(ax, dataset, model, Y, ax_scatter, rng):
 def draw_losses(ax, losses):
     loss = losses["mean"]
     ax.plot(loss)
-    ax.set_xlabel("epoch", labelpad=-4)
+    ax.set_xlabel("epoch", labelpad=1)
+    # label = ax.set_xlabel("epoch", labelpad=-4)
+    # label.set_horizontalalignment("right")
+    # ax.xaxis.set_label_coords(-0.01, -0.03)
     ax.set_ylabel("loss")
     ax.tick_params("both", labelsize="small")
     ax.spines.left.set_bounds(2.5, 7.5)
+    ax.set_yticks([2.5, 5, 7.5])
     ax.spines.bottom.set_bounds(0, 1500)
-    ax.set_xticks([0, 1500])
-
+    ax.set_xticks(range(0, 1501, 500))
+    ax.set_aspect(1500 / 5)
     txtkwargs = dict(
         fontsize="small",
         multialignment="center",
@@ -344,7 +351,6 @@ def draw_losses(ax, losses):
         # ymax=0.75,
         linewidth=plt.rcParams["axes.linewidth"],
         color="xkcd:light gray",
-        linestyle="dashed",
         zorder=1,
     )
     ax.annotate(
@@ -406,9 +412,9 @@ def main():
     with plt.style.context(stylef):
         fig, axd = plt.subplot_mosaic(
             [["arch", "emb", "loss"]],
-            gridspec_kw=dict(width_ratios=[3, 1, 1]),
-            figsize=(5.5, 1),
-            constrained_layout=True,
+            gridspec_kw=dict(width_ratios=[3, 2.2, 1], hspace=0.05),
+            figsize=(5.5, 1.2),
+            constrained_layout=False,
         )
 
         draw_arch(axd["arch"], dataset, model, Y, axd["emb"], rng=rng)
@@ -421,12 +427,22 @@ def main():
             alpha=0.5,
             rasterized=True,
         )
+        ax.text(0.33, 1, "CIFAR-10", transform=ax.transAxes, va="top")
+        ax.text(
+            0.5,
+            0.05,
+            "airplanes",
+            transform=ax.transAxes,
+            va="bottom",
+            fontsize="small",
+        )
         # add_scalebar_frac(ax)
         ax.set_axis_off()
+        ax.margins(0)
         ax.axis("equal")
 
         draw_losses(axd["loss"], losses)
-        plot.add_letters(axd.values())
+        fig.subplots_adjust(0.0, 0, 0.99, 1)
 
     metadata = plot.get_default_metadata()
     metadata["Title"] = "Architecture for contrastive visualization"
