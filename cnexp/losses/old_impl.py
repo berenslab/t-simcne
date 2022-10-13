@@ -205,8 +205,37 @@ def make_neighbor_indices(batch_size, negative_samples, device=None):
 
 
 class SlowContrastiveLoss(LossBase):
+    def get_deps(self):
+        supdeps = super().get_deps()
+        # the default return value for kwargs.get needs to match the
+        # "loss_mode" kwarg in the ContrastiveLoss class
+        if self.kwargs.get("loss_mode", "infonce") == "nce":
+            deps = [self.indir / "model.pt"]
+        else:
+            deps = []
+        return supdeps + deps
+
+    def load(self):
+        if self.kwargs.get("loss_mode", "infonce") == "nce":
+            self.model_sd = torch.load(self.indir / "model.pt")
+
     def compute(self):
         self.seed = self.random_state.integers(2**63 - 1)
         self.criterion = ContrastiveLoss(
             metric=self.metric, seed=self.seed, **self.kwargs
         )
+
+        # Add the normalization constant to the optimizer
+        if self.kwargs.get("loss_mode", "infonce") == "nce":
+            self.opt = self.model_sd["opt"]
+            self.opt.add_param_group(dict(params=self.criterion.log_Z))
+
+    def save(self):
+        super().save()
+
+        if self.kwargs.get("loss_mode", "infonce") == "nce":
+            self.model_sd["opt"] = self.opt
+            self.model_sd["opt_sd"] = self.opt.state_dict()
+            self.save_lambda_alt(
+                self.outdir / "model.pt", self.model_sd, torch.save
+            )
