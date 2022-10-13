@@ -11,9 +11,8 @@ class CrossEntropy(torch.nn.Module):
 
     def forward(self, features, backbone_features=None, labels=None):
         # backbone_features are unused
-        return F.cross_entropy(
-            features, torch.hstack((labels, labels)).to(features.device), **self.kwargs
-        )
+        feat = features[: labels.shape[0]]
+        return F.cross_entropy(feat, labels.to(features.device), **self.kwargs)
 
 
 class CELoss(LossBase):
