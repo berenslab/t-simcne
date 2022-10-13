@@ -42,12 +42,12 @@ def main():
         ft_euc=r"Euclidean $\to$ Euclidean",
         ft_cos=r"Cosine $\to$ Euclidean",
     )
-    redo.redo_ifchange_slurm(
-        [d / "intermediates.zip" for d in pdict.values()],
-        name="gallery",
-        partition="gpu-2080ti-preemptable",
-        time_str="18:30:00",
-    )
+    # redo.redo_ifchange_slurm(
+    #     [d / "intermediates.zip" for d in pdict.values()],
+    #     name="gallery",
+    #     partition="gpu-2080ti-preemptable",
+    #     time_str="18:30:00",
+    # )
     redo.redo_ifchange(
         [
             stylef,

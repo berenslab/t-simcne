@@ -70,8 +70,8 @@ def transl(key: str) -> str:
 
 
 def main():
-    fname = "../../stats/acctbl/cifar.csv"
-    redo.redo_ifchange(fname)
+    fname = "../../stats/acctbl/cifar-manual.csv"
+    # redo.redo_ifchange(fname)
 
     df: pd.DataFrame = pd.read_csv(fname)
 

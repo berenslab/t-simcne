@@ -32,12 +32,12 @@ def main():
         for seed in seeds
     ]
 
-    redo.redo_ifchange_slurm(
-        [path / "intermediates.zip" for path in paths],
-        name=[f"seed-{seed}" for seed in seeds],
-        partition="gpu-2080ti-preemptable",
-        time_str="18:30:00",
-    )
+    # redo.redo_ifchange_slurm(
+    #     [path / "intermediates.zip" for path in paths],
+    #     name=[f"seed-{seed}" for seed in seeds],
+    #     partition="gpu-2080ti-preemptable",
+    #     time_str="18:30:00",
+    # )
     redo.redo_ifchange(
         [
             stylef,
