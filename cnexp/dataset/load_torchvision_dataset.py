@@ -32,6 +32,7 @@ def load_torchvision_dataset(
     test =                T(dataset_test,  transform_none)
     return dict(
         train_contrastive=T(dataset_full,  transform),
+        train_augmented  =T(dataset_train, transform),
         train_linear     =T(dataset_train, transform_lin_train),
         test_linear      =test,
         train_plain      =T(dataset_train, transform_none),
