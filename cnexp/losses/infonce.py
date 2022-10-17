@@ -41,7 +41,7 @@ class InfoNCECosine(nn.Module):
         return loss
 
 
-class InfoNCEEuclidean(nn.Module):
+class InfoNCECauchy(nn.Module):
     def forward(self, features, backbone_features=None, labels=None):
         # backbone_features and labels are unused
         batch_size = features.size(0) // 2
@@ -49,9 +49,9 @@ class InfoNCEEuclidean(nn.Module):
         a = features[:batch_size]
         b = features[batch_size:]
 
-        sim_aa = 1 / (1 + torch.cdist(a, a) ** 2)
-        sim_bb = 1 / (1 + torch.cdist(b, b) ** 2)
-        sim_ab = 1 / (1 + torch.cdist(a, b) ** 2)
+        sim_aa = 1 / torch.cdist(a, a).square().add(1)
+        sim_bb = 1 / torch.cdist(b, b).square().add(1)
+        sim_ab = 1 / torch.cdist(a, b).square().add(1)
 
         tempered_alignment = torch.diagonal_copy(sim_ab).log_().mean()
 
@@ -69,6 +69,34 @@ class InfoNCEEuclidean(nn.Module):
         return loss
 
 
+class InfoNCEGaussian(nn.Module):
+    def forward(self, features, backbone_features=None, labels=None):
+        # backbone_features and labels are unused
+        batch_size = features.size(0) // 2
+
+        a = features[:batch_size]
+        b = features[batch_size:]
+
+        sim_aa = -torch.cdist(a, a).square()
+        sim_bb = -torch.cdist(b, b).square()
+        sim_ab = -torch.cdist(a, b).square()
+
+        tempered_alignment = sim_ab.trace() / batch_size
+
+        # exclude self inner product
+        self_mask = torch.eye(batch_size, dtype=bool, device=sim_aa.device)
+        sim_aa.masked_fill_(self_mask, float("-inf"))
+        sim_bb.masked_fill_(self_mask, float("-inf"))
+
+        logsumexp_1 = torch.hstack((sim_ab.T, sim_bb)).logsumexp(1).mean()
+        logsumexp_2 = torch.hstack((sim_aa, sim_ab)).logsumexp(1).mean()
+
+        raw_uniformity = logsumexp_1 + logsumexp_2
+
+        loss = -(tempered_alignment - raw_uniformity / 2)
+        return loss
+
+
 class InfoNCELoss(LossBase):
     def __init__(self, path, **kwargs):
         super().__init__(path, **kwargs)
@@ -76,8 +104,10 @@ class InfoNCELoss(LossBase):
         metric = self.metric
         if metric == "cosine":
             self.cls = InfoNCECosine
-        elif metric == "euclidean":
-            self.cls = InfoNCEEuclidean
+        elif metric == "euclidean":  # actually Cauchy
+            self.cls = InfoNCECauchy
+        elif metric == "gauss":
+            self.cls = InfoNCEGaussian
         else:
             raise ValueError(f"Unknown {metric = !r} for InfoNCE loss")
 
