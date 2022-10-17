@@ -39,12 +39,19 @@ def mutate_model(
             model.requires_grad_(not freeze)
 
     if change == "lastlin":
-        # swap out the last linear layer of the projection head
         last_layer = model.projection_head.layers[-1]
-        dim = last_layer.weight.size(1)
-        lin = nn.Linear(dim, out_dim)
-        nn.init.normal_(lin.weight, std=last_lin_std)
-        model.projection_head.layers[-1] = lin
+        orig_out_dim, dim = last_layer.weight.shape
+
+        if orig_out_dim != out_dim:
+            # swap out the last linear layer of the projection head
+            lin = nn.Linear(dim, out_dim)
+            nn.init.normal_(lin.weight, std=last_lin_std)
+            model.projection_head.layers[-1] = lin
+        else:
+            if last_lin_std != 1:
+                lin = model.projection_head.layers[-1]
+                lin.weight = torch.nn.Parameter(lin.weight * last_lin_std)
+                lin.bias = torch.nn.Parameter(lin.bias * last_lin_std)
 
     elif change == "proj_head":
         # swap out the entire projection head
