@@ -12,10 +12,10 @@ from cnexp import redo
 def evaluate_runs(runs):
     # evaluation of runs
     adict_files = {
-        "knn[H]": [r / "knn" for r in runs],
-        "knn[Z]": [r / "knn:layer=Z" for r in runs],
-        "knn[euc, H]": [r / "knn:metric=euclidean" for r in runs],
-        "knn[euc, Z]": [r / "knn:metric=euclidean:layer=Z" for r in runs],
+        "knn[cos, H]": [r / "knn:metric=cosine:layer=H" for r in runs],
+        "knn[cos, Z]": [r / "knn:metric=cosine" for r in runs],
+        "knn[euc, H]": [r / "knn:layer=H" for r in runs],
+        "knn[euc, Z]": [r / "knn" for r in runs],
         "sklin[H]": [r / "lin" for r in runs],
         "sklin[Z]": [r / "lin:layer=Z" for r in runs],
         "lin[H]": [r / expnames.lin_aug() for r in runs],
