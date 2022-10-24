@@ -2,14 +2,17 @@ from torch.utils.data import ConcatDataset, Dataset
 from torchvision import transforms
 
 
-def get_transforms(mean, std, size, setting):
+def get_transforms(
+    mean, std, size, setting, crop_scale_lo=0.2, crop_scale_hi=1
+):
     normalize = transforms.Normalize(mean=mean, std=std)
 
+    crop_scale = crop_scale_lo, crop_scale_hi
     if setting == "contrastive":
         return transforms.Compose(
             [
                 # transforms.RandomRotation(30),
-                transforms.RandomResizedCrop(size=size, scale=(0.2, 1.0)),
+                transforms.RandomResizedCrop(size=size, scale=crop_scale),
                 transforms.RandomHorizontalFlip(),
                 transforms.RandomApply(
                     [transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)], p=0.8

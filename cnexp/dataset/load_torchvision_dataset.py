@@ -4,14 +4,40 @@ from ..imagedistortions import TransformedPairDataset, get_transforms
 
 
 def load_torchvision_dataset(
-    dataset_class, /, mean, std, size, download=True, train=None, **kwargs
+    dataset_class,
+    /,
+    mean,
+    std,
+    size,
+    download=True,
+    train=None,
+    crop_scale_lo=0.2,
+    crop_scale_hi=1,
+    **kwargs,
 ):
-    transform = get_transforms(mean, std, size=size, setting="contrastive")
+    transform = get_transforms(
+        mean,
+        std,
+        size=size,
+        setting="contrastive",
+        crop_scale_lo=crop_scale_lo,
+        crop_scale_hi=crop_scale_hi,
+    )
     transform_lin_train = get_transforms(
-        mean, std, size=size, setting="train_linear_classifier"
+        mean,
+        std,
+        size=size,
+        setting="train_linear_classifier",
+        crop_scale_lo=crop_scale_lo,
+        crop_scale_hi=crop_scale_hi,
     )
     transform_none = get_transforms(
-        mean, std, size=size, setting="test_linear_classifier"
+        mean,
+        std,
+        size=size,
+        setting="test_linear_classifier",
+        crop_scale_lo=crop_scale_lo,
+        crop_scale_hi=crop_scale_hi,
     )
 
     dataset_train = dataset_class(
