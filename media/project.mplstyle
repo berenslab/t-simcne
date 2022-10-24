@@ -3,6 +3,7 @@ scatter.marker : .               ## The default marker type for scatter plots.
 scatter.edgecolors : None
 lines.markersize  : 1            ## markersize, in points
                                  ## used by scatter plot s = l.ms**2
+patch.linewidth: .5              ## for arrow patches
 lines.linewidth : .5
 image.cmap   : tab10             ## A colormap name, gray etc...
 
