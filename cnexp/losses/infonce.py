@@ -54,6 +54,10 @@ class InfoNCECosine(nn.Module):
 
 
 class InfoNCECauchy(nn.Module):
+    def __init__(self, temperature: float = 1):
+        super().__init__()
+        self.temperature = temperature
+
     def forward(self, features, backbone_features=None, labels=None):
         # backbone_features and labels are unused
         batch_size = features.size(0) // 2
@@ -61,9 +65,9 @@ class InfoNCECauchy(nn.Module):
         a = features[:batch_size]
         b = features[batch_size:]
 
-        sim_aa = 1 / torch.cdist(a, a).square().add(1)
-        sim_bb = 1 / torch.cdist(b, b).square().add(1)
-        sim_ab = 1 / torch.cdist(a, b).square().add(1)
+        sim_aa = 1 / (torch.cdist(a, a) * self.temperature).square().add(1)
+        sim_bb = 1 / (torch.cdist(b, b) * self.temperature).square().add(1)
+        sim_ab = 1 / (torch.cdist(a, b) * self.temperature).square().add(1)
 
         tempered_alignment = torch.diagonal_copy(sim_ab).log_().mean()
 
@@ -81,7 +85,7 @@ class InfoNCECauchy(nn.Module):
         return loss
 
 
-class InfoNCEGaussian(nn.Module):
+class InfoNCEGaussian(InfoNCECauchy):
     def forward(self, features, backbone_features=None, labels=None):
         # backbone_features and labels are unused
         batch_size = features.size(0) // 2
@@ -89,9 +93,9 @@ class InfoNCEGaussian(nn.Module):
         a = features[:batch_size]
         b = features[batch_size:]
 
-        sim_aa = -torch.cdist(a, a).square()
-        sim_bb = -torch.cdist(b, b).square()
-        sim_ab = -torch.cdist(a, b).square()
+        sim_aa = -(torch.cdist(a, a) * self.temperature).square()
+        sim_bb = -(torch.cdist(b, b) * self.temperature).square()
+        sim_ab = -(torch.cdist(a, b) * self.temperature).square()
 
         tempered_alignment = sim_ab.trace() / batch_size
 
