@@ -4,6 +4,8 @@ This is the code for the paper “[Unsupervised visualization of image datasets 
 
 We show that it is possible to visualize datasets such as CIFAR-10 and CIFAR-100 with a contrastive learning technique, while preserving a lot of structure!
 
+![arch](figures/arch.pdf.png "Subcluster structure in CIFAR-10")
+
 ## CIFAR-10
 
 ![annotated plot of cifar10](figures/cifar.annotated.pdf.png "Subcluster structure in CIFAR-10")
