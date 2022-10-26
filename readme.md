@@ -23,7 +23,9 @@ We found out that there are >150 duplicates of just three separate images in CIF
 
 Furthermore there seems to be some quite strange images in CIFAR-10:
 
-![outlier images in cifar10](figures/cifar.outliers.png "Outlier images in CIFAR-10")
+<p align="center">
+<img width="50%" alt="outlier images in cifar10" src="figures/cifar.outliers.png">
+</p>
 
 And finally, there is a whole class of flatfishes, that seem to be misplaces, but they actually consist of caught flatfishes along with fishermen.
 
