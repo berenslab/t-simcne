@@ -1,6 +1,6 @@
 # Unsupervised visualization of image datasets using contrastive learning
 
-This is the code for the paper “Unsupervised visualization of image datasets using contrastive learning.”
+This is the code for the paper “[Unsupervised visualization of image datasets using contrastive learning](https://arxiv.org/abs/2210.09879).”
 
 We show that it is possible to visualize datasets such as CIFAR-10 and CIFAR-100 with a contrastive learning technique, while preserving a lot of structure!
 
