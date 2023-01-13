@@ -16,6 +16,14 @@ def evaluate_runs(runs):
         "knn[cos, Z]": [r / "knn:metric=cosine" for r in runs],
         "knn[euc, H]": [r / "knn:layer=H" for r in runs],
         "knn[euc, Z]": [r / "knn" for r in runs],
+        "knn[k=5, cos, H]": [
+            r / "knn:n_neighbors=5:metric=cosine:layer=H" for r in runs
+        ],
+        "knn[k=5, cos, Z]": [
+            r / "knn:n_neighbors=5:metric=cosine" for r in runs
+        ],
+        "knn[k=5, euc, H]": [r / "knn:n_neighbors=5:layer=H" for r in runs],
+        "knn[k=5, euc, Z]": [r / "knn:n_neighbors=5" for r in runs],
         "sklin[H]": [r / "lin" for r in runs],
         "sklin[Z]": [r / "lin:layer=Z" for r in runs],
         "lin[H]": [r / expnames.lin_aug() for r in runs],
@@ -125,7 +133,7 @@ def main():
         m_str = "ft"
         epoch_budget = [775, 25, 200]
     elif metric == "ft-cos":
-        m_str = "mixed"
+        m_str = "ft-cos"
         n_epochs = 1500
         epoch_budget = [1000, 50, 450]
     else:
