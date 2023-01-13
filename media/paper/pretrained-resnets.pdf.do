@@ -3,39 +3,19 @@
 import sys
 from pathlib import Path
 
-import hdbscan
 import matplotlib.pyplot as plt
 import numpy as np
 from cnexp import plot, redo
 from cnexp.plot.scalebar import add_scalebar_frac
-
-# from sklearn.linear_model import SGDClassifier
-from sklearn import metrics
-from sklearn.cluster import MiniBatchKMeans
+from sklearn.inspection import DecisionBoundaryDisplay
+from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
-
-
-def lda_ratio(Z, y):
-    mean = np.mean(Z, axis=0)
-    n_features = Z.shape[1]
-
-    Sw = np.zeros((n_features, n_features))
-    Sb = np.zeros((n_features, n_features))
-
-    for c in np.unique(y):
-        Xc = Z[y == c]
-        class_mean = np.mean(Xc, axis=0)
-        # within-class variance
-        Sw += (Xc - class_mean).T @ (Xc - class_mean)
-        mean_diff = (class_mean - mean).reshape(n_features, 1)
-        # between-class variance
-        Sb += np.sum(y == c) * mean_diff @ mean_diff.T
-
-    return np.sum(np.diag(Sb)) / np.sum(np.diag(Sw))
 
 
 def main():
@@ -43,10 +23,10 @@ def main():
     root = Path("../../experiments/")
     # prefix = root / sys.argv[2] / "dl"
     stylef = "../project.mplstyle"
-    k = 100
+    rng = np.random.default_rng(511622144)
 
     dname_dict = dict(
-        # cifar="CIFAR-10",
+        cifar="CIFAR-10",
         cifar100="CIFAR-100",  # tiny="Tiny ImageNet"
     )
 
@@ -63,7 +43,7 @@ def main():
         fig, axxs = plt.subplots(
             len(datasets),
             n_cols,
-            figsize=(5.5, 1.5 * len(datasets)),
+            figsize=(5.5, 1.15 * len(datasets)),
             squeeze=False,
         )
         for axs, dataset, name in zip(axxs, datasets, dname_dict.values()):
@@ -83,6 +63,7 @@ def main():
             for ax, key in zip(axs, keys):
 
                 Y = npz[key].astype(float)
+                cm = plt.get_cmap(lut=labels.max() + 1)
                 ax.scatter(
                     Y[:, 0],
                     Y[:, 1],
@@ -90,40 +71,35 @@ def main():
                     alpha=0.5,
                     rasterized=True,
                     zorder=4.5,
+                    cmap=cm,
                 )
                 ax.set_title(key)
 
                 add_scalebar_frac(ax)
 
                 X_train, X_test, y_train, y_test = train_test_split(
-                    Y, labels, test_size=10_000, random_state=11
+                    Y,
+                    labels,
+                    test_size=10_000,
+                    random_state=rng.integers(2**32),
                 )
 
-                n_classes = 10 if name == "CIFAR-10" else 100
+                clf = make_pipeline(
+                    StandardScaler(),
+                    LogisticRegression(
+                        penalty="none",
+                        solver="saga",
+                        random_state=rng.integers(2**32),
+                    ),
+                )
+                clf.fit(X_train, y_train)
 
-                clusterer = hdbscan.HDBSCAN(
-                    min_cluster_size=5,
-                    min_samples=5,
-                    cluster_selection_epsilon=1,
-                )
-                # clusterer = MiniBatchKMeans(n_classes, random_state=10110101)
-                preds = clusterer.fit_predict(Y)
-
-                silhouette_score = metrics.silhouette_score(
-                    Y, preds, sample_size=10000, random_state=44**5
-                )
-                ari = metrics.adjusted_rand_score(labels, preds)
-                ami = metrics.adjusted_mutual_info_score(labels, preds)
-                acctxt = (
-                    f"ARI = {ari:.2f}\n"
-                    f"AMI = {ami:.2f}\n"
-                    f"#clusters = {preds.max()}\n"
-                    f"sil. (pred.) = {silhouette_score:.2f}\n"
-                )
+                acc = clf.score(X_test, y_test)
+                acctxt = f"acc = {acc:.2f}"
                 eprint(
-                    f"{key[-10:]}:\tari = {ari:.2f},"
-                    f"\tami = {ami:.2f},\tsil. = {silhouette_score:.2f}"
-                    f"\t#cluster = {preds.max()}"
+                    f"{name}\t{key[-10:]}:\t"
+                    f"train {clf.score(X_train, y_train):.2f},\t"
+                    f"test {acc:.2f}"
                 )
 
                 # ax.set_title(acctxt, loc="right", fontsize="small")
@@ -138,12 +114,17 @@ def main():
                     ma="right",
                 )
 
-                for cluster_idx in np.unique(preds):
-                    Xc = Y[preds == cluster_idx]
-                    cmean = Xc.mean(axis=0)
-                    ax.scatter(
-                        [cmean[0]], [cmean[1]], marker="x", c="black", zorder=5
-                    )
+                levels = [i - 0.5 for i in range(labels.max() + 2)]
+                DecisionBoundaryDisplay.from_estimator(
+                    clf,
+                    Y,
+                    grid_resolution=1000,
+                    eps=0,
+                    ax=ax,
+                    alpha=0.4,
+                    levels=levels,
+                    cmap=cm,
+                )
 
                 ax.margins(0)
 
