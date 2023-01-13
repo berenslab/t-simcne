@@ -1,12 +1,12 @@
-from sklearn.linear_model import SGDClassifier
+from sklearn.linear_model import LogisticRegression
 
 from . import EvalBase
 
 
 def linear_acc(
-    X_train, X_test, y_train, y_test, loss="log_loss", n_jobs=-1, **kwargs
+    X_train, X_test, y_train, y_test, solver="saga", n_jobs=-1, **kwargs
 ):
-    lin = SGDClassifier(loss=loss, n_jobs=n_jobs, **kwargs)
+    lin = LogisticRegression(solver=solver, n_jobs=n_jobs, **kwargs)
 
     lin.fit(X_train, y_train)
     return lin.score(X_test, y_test)
