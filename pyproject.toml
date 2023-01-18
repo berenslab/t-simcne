@@ -16,6 +16,7 @@ dependencies = [
     "python-telegram-bot",
     "ffmpeg-python",
     "scikit-learn",
+    "hdbscan",
     "pillow",
     "annoy",
     "scipy",
