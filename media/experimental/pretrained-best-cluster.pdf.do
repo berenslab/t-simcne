@@ -201,7 +201,10 @@ def main():
             #     borderaxespad=0,
             # )
             # [txt.set_multialignment("right") for txt in legend.get_texts()]
-            ax.set_ylabel(datakey.upper())
+            tr = dict(
+                ari="Adjusted Rand index", ami="Adjusted mutual information"
+            )
+            ax.set_ylabel(tr[datakey])
             ax.set_xticks(
                 xticks,
                 [s.replace("ResNet", "RN") for s in npzkeynames],
