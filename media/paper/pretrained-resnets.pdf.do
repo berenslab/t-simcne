@@ -60,13 +60,20 @@ def main():
             npz = np.load(dataset)
             labels = npz["labels"]
             keys = [k for k in npz.keys() if k != "labels"]
+            train, test = train_test_split(
+                np.arange(labels.shape[0]),
+                test_size=10_000,
+                random_state=rng.integers(2**32),
+                stratify=labels,
+            )
+            eprint(train.shape, test.shape)
             for ax, key in zip(axs, keys):
 
-                Y = npz[key].astype(float)
+                X = npz[key].astype(float)
                 cm = plt.get_cmap(lut=labels.max() + 1)
                 ax.scatter(
-                    Y[:, 0],
-                    Y[:, 1],
+                    X[:, 0],
+                    X[:, 1],
                     c=labels,
                     alpha=0.5,
                     rasterized=True,
@@ -77,29 +84,40 @@ def main():
 
                 add_scalebar_frac(ax)
 
-                X_train, X_test, y_train, y_test = train_test_split(
-                    Y,
-                    labels,
-                    test_size=10_000,
-                    random_state=rng.integers(2**32),
+                X_train, X_test, y_train, y_test = (
+                    X[train],
+                    X[test],
+                    labels[train],
+                    labels[test],
                 )
 
-                clf = make_pipeline(
-                    StandardScaler(),
-                    LogisticRegression(
-                        penalty="none",
-                        solver="saga",
-                        random_state=rng.integers(2**32),
-                    ),
-                )
-                clf.fit(X_train, y_train)
+                test_accs = []
+                train_accs = []
+                for run in range(1):
+                    clf = make_pipeline(
+                        StandardScaler(),
+                        LogisticRegression(
+                            penalty="none",
+                            solver="saga",
+                            n_jobs=-1,
+                            tol=1e-3,
+                            random_state=rng.integers(2**32),
+                        ),
+                    )
+                    clf.fit(X_train, y_train)
 
-                acc = clf.score(X_test, y_test)
-                acctxt = f"acc = {acc:.2f}"
+                    acc = clf.score(X_test, y_test)
+                    test_accs.append(acc)
+                    train_accs.append(clf.score(X_train, y_train))
+
+                accs = np.array(test_accs)
+                train_accs = np.array(train_accs)
+                # acctxt = f"acc = {accs.mean() * 100:.0f}±{accs.std():.0%}"
+                acctxt = f"acc = {accs.mean():.0%}"
                 eprint(
                     f"{name}\t{key[-10:]}:\t"
-                    f"train {clf.score(X_train, y_train):.2f},\t"
-                    f"test {acc:.2f}"
+                    f"train {train_accs.mean():.0%}\t"  # ±{train_accs.std():.0%},\t"
+                    f"test {accs.mean():.0%}"  # ±{accs.std():.0%}"
                 )
 
                 # ax.set_title(acctxt, loc="right", fontsize="small")
@@ -115,9 +133,9 @@ def main():
                 )
 
                 levels = [i - 0.5 for i in range(labels.max() + 2)]
-                DecisionBoundaryDisplay.from_estimator(
+                dbd = DecisionBoundaryDisplay.from_estimator(
                     clf,
-                    Y,
+                    X,
                     grid_resolution=1000,
                     eps=0,
                     ax=ax,
@@ -125,6 +143,8 @@ def main():
                     levels=levels,
                     cmap=cm,
                 )
+                for c in dbd.surface_.collections:
+                    c.set_rasterized(True)
 
                 ax.margins(0)
 
