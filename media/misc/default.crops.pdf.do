@@ -106,14 +106,16 @@ def main():
             ds_ = f"{dataset}:crop_scale_lo={cs}"
 
         prefix = root / ds_ / "dl"
-        path = prefix / names.default_train(metric="cosine") / names.finetune()
+        path = (
+            prefix / names.default_train(metric="euclidean") / names.finetune()
+        )
         paths.append(path)
 
     redo.redo_ifchange_slurm(
         [p / "default.run" for p in paths],
         name=[f"crop {cs}" for cs in crop_scales],
         partition="gpu-2080ti",
-        time_str="20:30:00",
+        time_str="22:30:00",
     )
     redo.redo_ifchange(
         [
@@ -134,7 +136,7 @@ def main():
             plot_one(path, axs, title, norm_ylabel=ylab)
             ylab = False
 
-        add_letters(axs)
+        add_letters(axxs)
 
     metadata = get_default_metadata()
     metadata[
