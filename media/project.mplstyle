@@ -10,7 +10,8 @@ image.cmap   : tab10             ## A colormap name, gray etc...
 
 ## * FIGURE
 figure.constrained_layout.use: True
-figure.dpi         : 200         ## figure dots per inch
+figure.dpi         : 250         ## figure dots per inch
+savefig.dpi        : 250
 #figure.facecolor   : white     ## figure facecolor
 #figure.edgecolor   : white     ## figure edgecolor
 #figure.frameon     : True      ## enable figure frame

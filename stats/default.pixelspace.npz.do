@@ -8,6 +8,8 @@ import openTSNE
 import torch
 from cnexp import redo
 from sklearn.decomposition import PCA
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
 
 
 def eprint(*args, **kwargs):
@@ -38,8 +40,21 @@ def main():
     pixels = pixels.reshape(pixels.shape[0], -1)
     labels = np.array([lbl for im, lbl in dataset], dtype="uint8")
 
-    Y_tsne = do_tsne(pixels, rng.integers(2**32))
-    Y_pca = do_pca(pixels, rng.integers(2**32))
+    knn = KNeighborsClassifier(15)
+    X_train, X_test, y_train, y_test = train_test_split(
+        pixels, labels, test_size=10_000, random_state=11
+    )
+    knn.fit(X_train, y_train)
+    acc = knn.score(X_test, y_test)
+    print(f"knn pixel {acc = :%}", file=sys.stderr)
+    Y_tsne = do_tsne(pixels, rng.integers(2**31))
+    X_train, X_test, y_train, y_test = train_test_split(
+        Y_tsne, labels, test_size=10_000, random_state=11
+    )
+    knn.fit(X_train, y_train)
+    acc = knn.score(X_test, y_test)
+    print(f"knn tsne {acc = :%}", file=sys.stderr)
+    Y_pca = do_pca(pixels, rng.integers(2**31))
 
     with open(sys.argv[3], "wb") as f:
         np.savez(

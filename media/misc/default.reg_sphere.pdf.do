@@ -179,7 +179,12 @@ def plot_finetune_stages(ft_path, axs, titles, knn=True, loss=True):
         set_ylabel = False
 
     all_paths = plot_loss(axs[0, -1], paths)
-    n_stage = 2
+    if "circle_trained" in ft_path.parts:
+        n_stage = 0
+        stage_str = 2
+    else:
+        n_stage = 2
+        stage_str = n_stage
     p = all_paths[n_stage]
     # p = Path("../../experiments/fixed/circle_trained")
     redo.redo_ifchange(p / "intermediates.zip")
@@ -192,39 +197,38 @@ def plot_finetune_stages(ft_path, axs, titles, knn=True, loss=True):
         a,
         rng=rng,
         set_ylabel=False,
-        title=f"stage {n_stage} ({a.shape[1]}D)",
+        title=f"stage {stage_str} ({a.shape[1]}D)",
     )
 
 
 def main():
 
     root = Path("../../experiments/")
-    prefix = root / sys.argv[2] / "dl"
+    dataset = sys.argv[2]
+    if dataset == "tiny":
+        prefix = root / "tiny" / "dl:num_workers=48"
+    else:
+        prefix = root / sys.argv[2] / "dl"
     stylef = "../project.mplstyle"
 
-    ft = (
-        prefix
-        / names.default_train(metric="cosine")
-        # cosine training with a circle regularizer
-        / "sgd:lr=.0012/lrcos:n_epochs=100"
-        / "infonce:metric=cosine:reg_coef=1:reg_radius=1/train"
-        # Euclidean training in high dim
-        / "ftmodel:out_dim=128:change=lastlin:last_lin_std=200"
-        / "sgd:lr=0.0012/lrcos:n_epochs=150/infonce/train"
-        / names.finetune(
-            ft_epochs=100, ft_loss="infonce:temperature=200", ft_lr=1.2e-5
+    if dataset == "cifar":
+        # use the fixed one so it does not get rerun
+        circle_train = root / "fixed/circle_trained"
+    else:
+        circle_train = (
+            prefix
+            / names.default_train(metric="cosine")
+            # cosine training with a circle regularizer
+            / "sgd:lr=0.0012/lrcos:n_epochs=100"
+            / "infonce:metric=cosine:reg_coef=1:reg_radius=1/train"
         )
+
+    ft = (
+        circle_train
+        # Euclidean training in high dim
+        / "sgd:lr=0.0012/lrcos:n_epochs=400/infonce:temperature=200/train"
+        / names.finetune(ft_loss="infonce:temperature=200", ft_lr=1.2e-5)
     )
-    # use the fixed one so it does not get rerun
-    # ft = (
-    #     root
-    #     / "fixed/circle_trained"
-    #     # Euclidean training in high dim
-    #     / "sgd:lr=0.0012/lrcos:n_epochs=150/infonce:temperature=200/train"
-    #     / names.finetune(
-    #         ft_epochs=100, ft_loss="infonce:temperature=200", ft_lr=1.2e-5
-    #     )
-    # )
 
     redo.redo_ifchange_slurm(
         ft / "default.run",

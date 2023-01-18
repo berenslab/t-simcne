@@ -8,6 +8,7 @@ authors = [
 dependencies = [
     "torch",
     "torchvision",
+    "pytorch-lightning",
     "numpy",
     "pandas",
     "matplotlib",

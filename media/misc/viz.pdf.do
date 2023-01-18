@@ -17,10 +17,12 @@ if __name__ == "__main__":
     stylef = "../project.mplstyle"
 
     path_dict = dict(
-        normal=prefix / "model:out_dim=2/sgd/lrcos/infonce/train/",
-        epoch5k=prefix
-        / "model:out_dim=2/sgd/lrcos:n_epochs=5000/infonce/train/",
-        finetune=prefix / names.default_train() / names.finetune(),
+        # normal=prefix / "model:out_dim=2/sgd/lrcos/infonce/train/",
+        # epoch5k=prefix
+        # / "model:out_dim=2/sgd/lrcos:n_epochs=5000/infonce/train/",
+        finetune=prefix
+        / names.default_train(loss="infonce:metric=cosine:reg_coef=1e-5")
+        / names.finetune(),
     )
     fnames = [path / "intermediates.zip" for path in path_dict.values()]
     redo.redo_ifchange_slurm(
@@ -44,6 +46,7 @@ if __name__ == "__main__":
             len(path_dict),
             figsize=(len(path_dict) * blocksize, blocksize + 0.05),
             constrained_layout=True,
+            squeeze=False,
         )
 
         for ax, (key, ar) in zip(axs.flat, path_dict.items()):
