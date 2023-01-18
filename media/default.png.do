@@ -9,7 +9,7 @@ if [ $(command -v pdftoppm) ]; then
     # anywhere in the man page as far as I can see.
     pdftoppm -r 300 -png -singlefile "$FILE.pdf" > $3
 elif [ $(command -v convert) ]; then
-    convert -density 600 "$FILE.pdf" -resize 25% png:- > $3 2>/dev/null
+    convert -density 1000 "$FILE.pdf" -resize 25% png:- > $3 2>/dev/null
 else
     echo "No suitable command found for conversion.  Neither `pdftoppm' nor `convert' available." >&2
     exit 1
