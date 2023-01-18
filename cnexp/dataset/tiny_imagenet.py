@@ -81,6 +81,10 @@ def load_tiny_imagenet(root, **kwargs):
     std = (0.229, 0.224, 0.225)
     size = (64, 64)
 
+    # make root path independent of cwd so the dataset can be loaded
+    # while cwd is in other directories.
+    root = root.resolve()
+
     path = get_imagenet(root)
 
     transform = get_transforms(mean, std, size=size, setting="contrastive")
