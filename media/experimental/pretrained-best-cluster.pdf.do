@@ -28,6 +28,8 @@ def main():
 
     df_files_ = []
     npz_files = []
+    npz_names = []
+    names = []
     resnet_nums = [18, 34, 50, 101, 152]
     resnets = [f"resnet{n}.tsne" for n in resnet_nums]
     emb_str = "tsne"
@@ -41,16 +43,29 @@ def main():
             root.parent / f"stats/{dataname}.{emb_str}.pretrained.resnet.npz"
         )
         npz_files.append(npz_file)
+        npz_names.append(f"{emb_str}.{dataname}")
 
         df_files = []
         for name in ["tsimcne"] + resnets:
             reps = root.parent / f"stats/cluster/{dataname}.{name}.csv"
             # redo.redo_ifchange(reps)
             df_files.append(reps)
+            names.append(f"{name}.{dataname}")
         df_files_.append(df_files)
 
     df_files_ = np.array(df_files_)
-    redo.redo_ifchange(npz_files + list(df_files_.flat))
+    redo.redo_ifchange_slurm(
+        npz_files,
+        name=npz_names,
+        partition="gpu-v100",
+        time_str="01:15:00",
+    )
+    redo.redo_ifchange_slurm(
+        list(df_files_.flat),
+        name=names,
+        partition="cpu-preemptable",
+        time_str="00:45:00",
+    )
 
     with plt.style.context(stylef):
         fig, axxs = plt.subplots(
@@ -202,7 +217,7 @@ def main():
             # )
             # [txt.set_multialignment("right") for txt in legend.get_texts()]
             tr = dict(
-                ari="Adjusted Rand index", ami="Adjusted mutual information"
+                ari="adjusted Rand index", ami="adjusted mutual information"
             )
             ax.set_ylabel(tr[datakey])
             ax.set_xticks(
