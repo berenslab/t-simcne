@@ -1,0 +1,133 @@
+import numpy as np
+
+from .callback import to_features
+from .dataset.cifar import load_cifar10
+from .dataset.dataloader import make_dataloaders
+from .losses.infonce import InfoNCECauchy, InfoNCECosine, InfoNCEGaussian
+from .lrschedule import CosineAnnealingSchedule
+from .models.mutate_model import mutate_model
+from .models.simclr_like import make_model
+from .optimizers import lr_from_batchsize, make_sgd
+from .train import train
+
+
+class TSimCNE:
+    def __init__(
+        self,
+        model=None,
+        loss="infonce",
+        metric=None,
+        backbone="resnet18",
+        projection_head="mlp",
+        mutate_model_inplace=True,
+        total_epochs=[1000, 50, 450],
+        batch_size=512,
+        out_dim=2,
+        optimizer="sgd",
+        lr_scheduler="cos_annealing",
+        lr="batch_auto",
+        warmup="auto",
+        freeze_schedule="only_linear",
+        device="cuda:0",
+    ):
+        self.model = model
+        self.loss = loss
+        self.metric = metric
+        self.backbone = backbone
+        self.projection_head = projection_head
+        self.mutate_model_inplace = mutate_model_inplace
+        self.out_dim = out_dim
+        self.batch_size = batch_size
+        self.optimizer = optimizer
+        self.lr_scheduler = lr_scheduler
+        self.total_epochs = total_epochs
+        self.lr = lr
+        self.warmup = warmup
+        self.freeze_schedule = freeze_schedule
+        self.device = device
+
+        self._handle_parameters()
+
+    def _handle_parameters(self):
+        if self.model is None:
+            self.model = make_model(
+                backbone=self.backbone, proj_head=self.projection_head
+            )
+
+        if self.loss == "infonce":
+            if self.metric is None:
+                self.metric = "euclidean"
+
+            if self.metric == "euclidean":
+                self.loss = InfoNCECauchy()
+            elif self.metric == "cosine":
+                self.loss = InfoNCECosine()
+            elif self.metric == "gauss":
+                self.loss = InfoNCEGaussian()
+            else:
+                raise ValueError(
+                    f"Unknown {self.metric = !r} for InfoNCE loss"
+                )
+        # else: assume that the loss is a proper pytorch loss function
+
+        if isinstance(self.total_epochs, list):
+            self.epoch_schedule = self.total_epochs
+        elif isinstance(self.total_epochs, int):
+            self.epoch_schedule = [self.total_epochs]
+
+        self.n_stages = len(self.epoch_schedule)
+        n_stages = self.n_stages
+
+        if self.lr == "auto_batch":
+            lr = lr_from_batchsize(self.batch_size)
+            self.learning_rates = [lr, lr, lr / 1000][:n_stages]
+        elif isinstance(self.lr, list):
+            self.learning_rates = self.lr
+        elif isinstance(self.lr, (float, int)):
+            self.learning_rates = [self.lr]
+        else:
+            raise ValueError(
+                'Expected "auto_batch" or a list of learning rates '
+                f" but got {self.lr = !r}."
+            )
+
+        if self.n_stages != len(self.learning_rates):
+            raise ValueError(
+                f"Got {self.total_epochs} for total epochs, but "
+                f"{self.learning_rates} for learning rates "
+                f"(due to {self.lr = !r})."
+            )
+
+        if self.warmup == "auto":
+            self.warmup_schedules = [10, 0, 10][:n_stages]
+        elif isinstance(self.warmup, list):
+            self.warmup_schedules = self.warmup
+        else:
+            raise ValueError(
+                'Expected "auto" or a list of warmup epochs '
+                f"but got {self.warmup = !r}."
+            )
+
+        if len(self.warmup_schedules) != self.n_stages:
+            raise ValueError(
+                f"Number of warmup epochs (got {len(self.warmup_schedules)}) "
+                "needs to match "
+                f"number of learning rates (got {len(self.learning_rates)})."
+            )
+
+        if self.optimizer != "sgd":
+            raise ValueError(
+                f"Only 'sgd' is supported as optimizer, got {self.optimizer}."
+            )
+
+        if self.lr_scheduler != "cos_annealing":
+            raise ValueError(
+                "Only 'cos_annealing' is supported as learning rate "
+                f"scheduler, got {self.lr_scheduler}."
+            )
+
+    def fit(X):
+        ...
+
+    def transform(X):
+        ...
