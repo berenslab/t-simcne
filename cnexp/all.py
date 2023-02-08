@@ -125,9 +125,66 @@ class TSimCNE:
                 "Only 'cos_annealing' is supported as learning rate "
                 f"scheduler, got {self.lr_scheduler}."
             )
+        if self.freeze_schedule != "only_linear":
+            raise ValueError(
+                "Only 'only_linear' is supported as freeze_schedule, "
+                f"but got {self.freeze_schedule}."
+            )
 
-    def fit(X):
-        ...
+    def fit(self, X):
+        if not self.mutate_model_inplace:
+            from deepcopy import copy
 
-    def transform(X):
-        ...
+            self.model = copy(self.model)
+
+        it = zip(
+            self.epoch_schedule, self.learning_rates, self.warmup_schedules
+        )
+        for n_stage, (n_epochs, lr, warmup_epochs) in enumerate(it):
+            self._fit_stage(X, n_epochs, lr, warmup_epochs)
+
+            if n_stage == 0:
+                mutate_model(
+                    self.model,
+                    change="lastlin",
+                    freeze=True,
+                    out_dim=self.out_dim,
+                )
+            elif n_stage == 1:
+                mutate_model(self.model, freeze=False)
+
+    def _fit_stage(self, X, n_epochs, lr, warmup_epochs):
+        if self.optimizer == "sgd":
+            self.opt = make_sgd(self.model, lr=lr)
+
+        if self.lr_scheduler == "cos_annealing":
+            self.lrsched = CosineAnnealingSchedule(
+                self.opt, n_epochs=n_epochs, warmup_epochs=warmup_epochs
+            )
+
+        train(
+            X,
+            self.model,
+            self.loss,
+            self.opt,
+            self.lrsched,
+            device=self.device,
+        )
+
+    def transform(self, X, return_labels=True, return_backbone_feat=False):
+        Y, backbone_features, labels = to_features(
+            self.model, X, device=self.device
+        )
+
+        if return_labels and return_backbone_feat:
+            return Y, labels, backbone_features
+        elif not return_labels and return_backbone_feat:
+            return Y, backbone_features
+        elif return_labels and not return_backbone_feat:
+            return Y, labels
+        else:
+            return Y
+
+
+def example_test_cifar10():
+    tsimcne = TSimCNE(total_epochs=[3, 2, 2])
