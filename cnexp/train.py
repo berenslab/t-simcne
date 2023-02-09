@@ -54,7 +54,11 @@ def elapsed_time() -> float:
 def load_or_initialize(
     checkpoint_file, n_epochs, n_batches, checkpoint_valid=False
 ):
-    if not checkpoint_valid or not checkpoint_file.exists():
+    if (
+        not checkpoint_valid
+        or checkpoint_file is None
+        or not checkpoint_file.exists()
+    ):
         losses = np.full(
             (n_epochs, n_batches), float("-inf"), dtype=np.float16
         )
@@ -130,8 +134,8 @@ def train(
     opt: Optimizer,
     lrsched: _LRScheduler,
     *,
-    checkpoint,
-    checkpoint_valid: bool,
+    checkpoint=None,
+    checkpoint_valid: bool = False,
     n_epochs: int = None,
     device: torch.device = "cuda:0",
     callbacks: list = None,
