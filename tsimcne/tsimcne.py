@@ -2,8 +2,6 @@ import torch
 import torchvision
 
 from .callback import to_features
-from .dataset.cifar import load_cifar10
-from .dataset.dataloader import make_dataloaders
 from .imagedistortions import TransformedPairDataset, get_transforms
 from .losses.infonce import InfoNCECauchy, InfoNCECosine, InfoNCEGaussian
 from .lrschedule import CosineAnnealingSchedule

@@ -35,6 +35,12 @@ Since the project uses a `pyproject.toml` file, you need to make sure that pip  
 If you want to use it, you need to create a dataset for training, get the image augmentations and create a dataset that will augment an image twice so that we can do contrastive learning on it.  A minimal example is provided:
 
 ```python
+import torch
+import torchvision
+
+from tsimcne.tsimcne import TSimCNE
+from tsimcne.imagedistortions import TransformedPairDataset, get_transforms
+
 # get the cifar dataset (make sure to adapt `root` to point to your folder
 data_root = "experiments/cifar/out/cifar10"
 dataset_train = torchvision.datasets.CIFAR10(
@@ -89,8 +95,6 @@ tsimcne = TSimCNE(total_epochs=[500, 50, 250])
 tsimcne.fit(train_dl)
 # fit the original images
 Y, labels = tsimcne.transform(orig_dl)
-
-return Y, labels
 ```
 
 ## CIFAR-10
@@ -125,7 +129,7 @@ And finally, there is a whole class of flatfishes, that seem to be misplaces, bu
 
 # Implementation
 
-The code lies in `cnexp/` and it should be possible to install everything with `pip install -e .` at least that is how I installed this package.
+The code lies in `tsimcne/` and it should be possible to install everything with `pip install -e .` at least that is how I installed this package.
 
 The figures are in `figures/` and have been created with the script files ending in `.do` in `media/`.  If you want to reproduce those figures you need to use `redo` and change some variables in `redo.py` so that it runs.  And you probably want an available GPU/GPU cluster.
 
