@@ -1,5 +1,5 @@
 [project]
-name = "cnexp"
+name = "tsimcne"
 version = "0.0.1"
 description = "Contrastive experiments"
 authors = [
