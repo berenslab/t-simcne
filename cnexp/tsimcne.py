@@ -1,8 +1,10 @@
-import numpy as np
+import torch
+import torchvision
 
 from .callback import to_features
 from .dataset.cifar import load_cifar10
 from .dataset.dataloader import make_dataloaders
+from .imagedistortions import TransformedPairDataset, get_transforms
 from .losses.infonce import InfoNCECauchy, InfoNCECosine, InfoNCEGaussian
 from .lrschedule import CosineAnnealingSchedule
 from .models.mutate_model import mutate_model
@@ -25,7 +27,7 @@ class TSimCNE:
         out_dim=2,
         optimizer="sgd",
         lr_scheduler="cos_annealing",
-        lr="batch_auto",
+        lr="auto_batch",
         warmup="auto",
         freeze_schedule="only_linear",
         device="cuda:0",
@@ -131,7 +133,7 @@ class TSimCNE:
                 f"but got {self.freeze_schedule}."
             )
 
-    def fit(self, X):
+    def fit(self, X: torch.utils.data.DataLoader):
         if not self.mutate_model_inplace:
             from deepcopy import copy
 
@@ -153,7 +155,13 @@ class TSimCNE:
             elif n_stage == 1:
                 mutate_model(self.model, freeze=False)
 
-    def _fit_stage(self, X, n_epochs, lr, warmup_epochs):
+    def _fit_stage(
+        self,
+        X: torch.utils.data.DataLoader,
+        n_epochs: int,
+        lr: float,
+        warmup_epochs: int,
+    ):
         if self.optimizer == "sgd":
             self.opt = make_sgd(self.model, lr=lr)
 
@@ -171,7 +179,12 @@ class TSimCNE:
             device=self.device,
         )
 
-    def transform(self, X, return_labels=True, return_backbone_feat=False):
+    def transform(
+        self,
+        X: torch.utils.data.DataLoader,
+        return_labels: bool = True,
+        return_backbone_feat: bool = False,
+    ):
         Y, backbone_features, labels = to_features(
             self.model, X, device=self.device
         )
@@ -187,4 +200,59 @@ class TSimCNE:
 
 
 def example_test_cifar10():
+
+    # get the cifar dataset
+    dataset_train = torchvision.datasets.CIFAR10(
+        root="experiments/cifar/out/cifar10",
+        download=True,
+        train=True,
+    )
+    dataset_test = torchvision.datasets.CIFAR10(
+        root="experiments/cifar/out/cifar10",
+        download=True,
+        train=False,
+    )
+    dataset_full = torch.utils.data.ConcatDataset(
+        [dataset_train, dataset_test]
+    )
+
+    # mean, std, size correspond to dataset
+    mean = (0.4914, 0.4822, 0.4465)
+    std = (0.2023, 0.1994, 0.2010)
+    size = (32, 32)
+
+    # data augmentations for contrastive training
+    transform = get_transforms(
+        mean,
+        std,
+        size=size,
+        setting="contrastive",
+    )
+    # transform_none just normalizes the sample
+    transform_none = get_transforms(
+        mean,
+        std,
+        size=size,
+        setting="test_linear_classifier",
+    )
+
+    # datasets that return two augmented views of a given datapoint (and label)
+    dataset_contrastive = TransformedPairDataset(dataset_train, transform)
+    dataset_visualize = TransformedPairDataset(dataset_full, transform_none)
+
+    # wrap dataset into dataloader
+    train_dl = torch.utils.data.DataLoader(
+        dataset_contrastive, batch_size=1024, shuffle=True
+    )
+    orig_dl = torch.utils.data.DataLoader(
+        dataset_visualize, batch_size=1024, shuffle=False
+    )
+
+    # create the object
     tsimcne = TSimCNE(total_epochs=[3, 2, 2])
+    # train on the augmented/contrastive dataloader (this takes the most time)
+    tsimcne.fit(train_dl)
+    # fit the original images
+    Y, labels = tsimcne.transform(orig_dl)
+
+    return Y, labels
