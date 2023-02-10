@@ -2,7 +2,10 @@ import torch
 import torchvision
 
 from .callback import to_features
-from .imagedistortions import TransformedPairDataset, get_transforms
+from .imagedistortions import (
+    TransformedPairDataset,
+    get_transforms_unnormalized,
+)
 from .losses.infonce import InfoNCECauchy, InfoNCECosine, InfoNCEGaussian
 from .lrschedule import CosineAnnealingSchedule
 from .models.mutate_model import mutate_model
@@ -20,6 +23,7 @@ class TSimCNE:
         backbone="resnet18",
         projection_head="mlp",
         mutate_model_inplace=True,
+        data_transform=None,
         total_epochs=[1000, 50, 450],
         batch_size=512,
         out_dim=2,
@@ -29,6 +33,7 @@ class TSimCNE:
         warmup="auto",
         freeze_schedule="only_linear",
         device="cuda:0",
+        num_workers=8,
     ):
         self.model = model
         self.loss = loss
@@ -36,6 +41,7 @@ class TSimCNE:
         self.backbone = backbone
         self.projection_head = projection_head
         self.mutate_model_inplace = mutate_model_inplace
+        self.data_transform = data_transform
         self.out_dim = out_dim
         self.batch_size = batch_size
         self.optimizer = optimizer
@@ -45,6 +51,7 @@ class TSimCNE:
         self.warmup = warmup
         self.freeze_schedule = freeze_schedule
         self.device = device
+        self.num_workers = num_workers
 
         self._handle_parameters()
 
@@ -131,17 +138,57 @@ class TSimCNE:
                 f"but got {self.freeze_schedule}."
             )
 
-    def fit(self, X: torch.utils.data.DataLoader):
+    def fit_transform(
+        self,
+        X: torch.utils.data.Dataset,
+        data_transform=None,
+        return_labels: bool = False,
+        return_backbone_feat: bool = False,
+    ):
+        self.fit(X)
+        return self.transform(
+            X,
+            data_transform=data_transform,
+            return_labels=return_labels,
+            return_backbone_feat=return_backbone_feat,
+        )
+
+    def fit(self, X: torch.utils.data.Dataset):
         if not self.mutate_model_inplace:
             from deepcopy import copy
 
             self.model = copy(self.model)
 
+        if self.data_transform is None:
+            sample_img, _lbl = X.dataset[0]
+            size = sample_img.shape[1:]
+
+            # data augmentations for contrastive training
+            self.data_transform = get_transforms_unnormalized(
+                size=size,
+                setting="contrastive",
+            )
+
+            self.data_transform_none = get_transforms_unnormalized(
+                size=size, setting="none"
+            )
+
+        # dataset that returns two augmented views of a given
+        # datapoint (and label)
+        dataset_contrastive = TransformedPairDataset(X, self.data_transform)
+        # wrap dataset into dataloader
+        train_dl = torch.utils.data.DataLoader(
+            dataset_contrastive,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+            shuffle=True,
+        )
+
         it = zip(
             self.epoch_schedule, self.learning_rates, self.warmup_schedules
         )
         for n_stage, (n_epochs, lr, warmup_epochs) in enumerate(it):
-            self._fit_stage(X, n_epochs, lr, warmup_epochs)
+            self._fit_stage(train_dl, n_epochs, lr, warmup_epochs)
 
             if n_stage == 0:
                 mutate_model(
@@ -179,12 +226,30 @@ class TSimCNE:
 
     def transform(
         self,
-        X: torch.utils.data.DataLoader,
-        return_labels: bool = True,
+        X: torch.utils.data.Dataset,
+        data_transform=None,
+        return_labels: bool = False,
         return_backbone_feat: bool = False,
     ):
+
+        if data_transform is not None:
+            self.data_transform_none = data_transform
+
+        # dataset that returns two augmented views of a given
+        # datapoint (and label)
+        dataset_contrastive = TransformedPairDataset(
+            X, self.data_transform_none
+        )
+        # wrap dataset into dataloader
+        loader = torch.utils.data.DataLoader(
+            dataset_contrastive,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+            shuffle=True,
+        )
+
         Y, backbone_features, labels = to_features(
-            self.model, X, device=self.device
+            self.model, loader, device=self.device
         )
 
         if return_labels and return_backbone_feat:
@@ -197,60 +262,60 @@ class TSimCNE:
             return Y
 
 
-def example_test_cifar10():
+# def example_test_cifar10():
 
-    # get the cifar dataset
-    dataset_train = torchvision.datasets.CIFAR10(
-        root="experiments/cifar/out/cifar10",
-        download=True,
-        train=True,
-    )
-    dataset_test = torchvision.datasets.CIFAR10(
-        root="experiments/cifar/out/cifar10",
-        download=True,
-        train=False,
-    )
-    dataset_full = torch.utils.data.ConcatDataset(
-        [dataset_train, dataset_test]
-    )
+#     # get the cifar dataset
+#     dataset_train = torchvision.datasets.CIFAR10(
+#         root="experiments/cifar/out/cifar10",
+#         download=True,
+#         train=True,
+#     )
+#     dataset_test = torchvision.datasets.CIFAR10(
+#         root="experiments/cifar/out/cifar10",
+#         download=True,
+#         train=False,
+#     )
+#     dataset_full = torch.utils.data.ConcatDataset(
+#         [dataset_train, dataset_test]
+#     )
 
-    # mean, std, size correspond to dataset
-    mean = (0.4914, 0.4822, 0.4465)
-    std = (0.2023, 0.1994, 0.2010)
-    size = (32, 32)
+#     # mean, std, size correspond to dataset
+#     mean = (0.4914, 0.4822, 0.4465)
+#     std = (0.2023, 0.1994, 0.2010)
+#     size = (32, 32)
 
-    # data augmentations for contrastive training
-    transform = get_transforms(
-        mean,
-        std,
-        size=size,
-        setting="contrastive",
-    )
-    # transform_none just normalizes the sample
-    transform_none = get_transforms(
-        mean,
-        std,
-        size=size,
-        setting="test_linear_classifier",
-    )
+#     # data augmentations for contrastive training
+#     transform = get_transforms(
+#         mean,
+#         std,
+#         size=size,
+#         setting="contrastive",
+#     )
+#     # transform_none just normalizes the sample
+#     transform_none = get_transforms(
+#         mean,
+#         std,
+#         size=size,
+#         setting="test_linear_classifier",
+#     )
 
-    # datasets that return two augmented views of a given datapoint (and label)
-    dataset_contrastive = TransformedPairDataset(dataset_train, transform)
-    dataset_visualize = TransformedPairDataset(dataset_full, transform_none)
+#     # datasets that return two augmented views of a given datapoint (and label)
+#     dataset_contrastive = TransformedPairDataset(dataset_train, transform)
+#     dataset_visualize = TransformedPairDataset(dataset_full, transform_none)
 
-    # wrap dataset into dataloader
-    train_dl = torch.utils.data.DataLoader(
-        dataset_contrastive, batch_size=1024, shuffle=True
-    )
-    orig_dl = torch.utils.data.DataLoader(
-        dataset_visualize, batch_size=1024, shuffle=False
-    )
+#     # wrap dataset into dataloader
+#     train_dl = torch.utils.data.DataLoader(
+#         dataset_contrastive, batch_size=1024, shuffle=True
+#     )
+#     orig_dl = torch.utils.data.DataLoader(
+#         dataset_visualize, batch_size=1024, shuffle=False
+#     )
 
-    # create the object
-    tsimcne = TSimCNE(total_epochs=[3, 2, 2])
-    # train on the augmented/contrastive dataloader (this takes the most time)
-    tsimcne.fit(train_dl)
-    # fit the original images
-    Y, labels = tsimcne.transform(orig_dl)
+#     # create the object
+#     tsimcne = TSimCNE(total_epochs=[3, 2, 2])
+#     # train on the augmented/contrastive dataloader (this takes the most time)
+#     tsimcne.fit(train_dl)
+#     # fit the original images
+#     Y, labels = tsimcne.transform(orig_dl, return_labels=True)
 
-    return Y, labels
+#     return Y, labels

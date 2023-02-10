@@ -57,44 +57,12 @@ dataset_full = torch.utils.data.ConcatDataset(
     [dataset_train, dataset_test]
 )
 
-# mean, std, size correspond to dataset
-mean = (0.4914, 0.4822, 0.4465)
-std = (0.2023, 0.1994, 0.2010)
-size = (32, 32)
-
-# data augmentations for contrastive training
-transform = get_transforms(
-    mean,
-    std,
-    size=size,
-    setting="contrastive",
-)
-# transform_none just normalizes the sample
-transform_none = get_transforms(
-    mean,
-    std,
-    size=size,
-    setting="test_linear_classifier",
-)
-
-# datasets that return two augmented views of a given datapoint (and label)
-dataset_contrastive = TransformedPairDataset(dataset_train, transform)
-dataset_visualize = TransformedPairDataset(dataset_full, transform_none)
-
-# wrap dataset into dataloader
-train_dl = torch.utils.data.DataLoader(
-    dataset_contrastive, batch_size=1024, shuffle=True
-)
-orig_dl = torch.utils.data.DataLoader(
-    dataset_visualize, batch_size=1024, shuffle=False
-)
-
 # create the object
 tsimcne = TSimCNE(total_epochs=[500, 50, 250])
 # train on the augmented/contrastive dataloader (this takes the most time)
-tsimcne.fit(train_dl)
+tsimcne.fit(dataset_full)
 # fit the original images
-Y, labels = tsimcne.transform(orig_dl)
+Y, labels = tsimcne.transform(dataset_full, return_labels=True)
 ```
 
 ## CIFAR-10
