@@ -1,3 +1,4 @@
+import PIL
 import torch
 import torchvision
 
@@ -160,8 +161,14 @@ class TSimCNE:
             self.model = copy(self.model)
 
         if self.data_transform is None:
-            sample_img, _lbl = X.dataset[0]
-            size = sample_img.shape[1:]
+            sample_img, _lbl = X[0]
+            if isinstance(sample_img, PIL.Image.Image):
+                size = sample_img.size
+            else:
+                raise ValueError(
+                    "The dataset does not return PIL images, "
+                    f"got {type(sample_img)} instead."
+                )
 
             # data augmentations for contrastive training
             self.data_transform = get_transforms_unnormalized(
