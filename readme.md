@@ -4,12 +4,11 @@ This is the code for the paper “[Unsupervised visualization of image datasets 
 
 If you use the code, please cite the paper:
 ```
-@inproceedings{
-boehm2023unsupervised,
-title={Unsupervised visualization of image datasets using contrastive learning},
-author={B{\"o}hm, Jan Niklas and Berens, Philipp and Kobak, Dmitry},
-booktitle={International Conference on Learning Representations},
-year={2023},
+@inproceedings{boehm2023unsupervised,
+  title={Unsupervised visualization of image datasets using contrastive learning},
+  author={B{\"o}hm, Jan Niklas and Berens, Philipp and Kobak, Dmitry},
+  booktitle={International Conference on Learning Representations},
+  year={2023},
 }
 ```
 
