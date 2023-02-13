@@ -102,7 +102,5 @@ And finally, there is a whole class of flatfishes, that seem to be misplaces, bu
 
 # Implementation
 
-The code lies in `tsimcne/` and it should be possible to install everything with `pip install -e .` at least that is how I installed this package.
-
 The figures are in `figures/` and have been created with the script files ending in `.do` in `media/`.  If you want to reproduce those figures you need to use `redo` and change some variables in `redo.py` so that it runs.  And you probably want an available GPU/GPU cluster.
 
