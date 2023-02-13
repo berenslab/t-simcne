@@ -37,9 +37,8 @@ If you want to use it, you need to create a dataset for training, get the image 
 ```python
 import torch
 import torchvision
-
+from matplotlib import pyplot as plt
 from tsimcne.tsimcne import TSimCNE
-from tsimcne.imagedistortions import TransformedPairDataset, get_transforms
 
 # get the cifar dataset (make sure to adapt `root` to point to your folder
 data_root = "experiments/cifar/out/cifar10"
@@ -53,16 +52,23 @@ dataset_test = torchvision.datasets.CIFAR10(
     download=True,
     train=False,
 )
-dataset_full = torch.utils.data.ConcatDataset(
-    [dataset_train, dataset_test]
-)
+dataset_full = torch.utils.data.ConcatDataset([dataset_train, dataset_test])
 
-# create the object
+# create the object (here we run with less epochs
+# than in the paper [1000, 50, 450]).
 tsimcne = TSimCNE(total_epochs=[500, 50, 250])
 # train on the augmented/contrastive dataloader (this takes the most time)
 tsimcne.fit(dataset_full)
-# fit the original images
-Y, labels = tsimcne.transform(dataset_full, return_labels=True)
+# map the original images to 2D
+Y = tsimcne.transform(dataset_full)
+
+# get the original labels from the dataset
+labels = [lbl for img, lbl in dataset_full]
+
+# plot the data
+fig, ax = plt.subplots()
+ax.scatter(*Y.T, c=labels)
+fig.savefig("tsimcne.png")
 ```
 
 ## CIFAR-10

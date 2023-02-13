@@ -1,6 +1,5 @@
 import PIL
 import torch
-import torchvision
 
 from .callback import to_features
 from .imagedistortions import (
@@ -252,7 +251,7 @@ class TSimCNE:
             dataset_contrastive,
             batch_size=self.batch_size,
             num_workers=self.num_workers,
-            shuffle=True,
+            shuffle=False,
         )
 
         Y, backbone_features, labels = to_features(
