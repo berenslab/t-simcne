@@ -2,7 +2,7 @@
 
 This is the code for the paper “[Unsupervised visualization of image datasets using contrastive learning](https://arxiv.org/abs/2210.09879)” (ICLR 2023).
 
-If you use the code, please cite the paper:
+If you use the code, please cite our paper:
 ```
 @inproceedings{boehm2023unsupervised,
   title={Unsupervised visualization of image datasets using contrastive learning},
@@ -12,7 +12,7 @@ If you use the code, please cite the paper:
 }
 ```
 
-We show that it is possible to visualize datasets such as CIFAR-10 and CIFAR-100 with a contrastive learning technique, while preserving a lot of structure!
+We show that it is possible to visualize datasets such as CIFAR-10 and CIFAR-100 in 2D with a contrastive learning objective, while preserving a lot of structure!
 
 ![arch](figures/arch.pdf.png "Subcluster structure in CIFAR-10")
 
@@ -30,8 +30,6 @@ Since the project uses a `pyproject.toml` file, you need to make sure that pip  
 
 
 ## Usage example
-
-If you want to use it, you need to create a dataset for training, get the image augmentations and create a dataset that will augment an image twice so that we can do contrastive learning on it.  A minimal example is provided:
 
 ```python
 import torch
@@ -74,13 +72,14 @@ fig.savefig("tsimcne.png")
 
 ![annotated plot of cifar10](figures/cifar.annotated.pdf.png
 "Subcluster structure in CIFAR-10")
+
 ## CIFAR-100
 
 <p align="center">
 <img alt="label density for cifar100" src="figures/cifar100.labels.pdf.png">
 </p>
 
-# Duplicates and oddities
+## Duplicates and oddities in CIFAR datasets
 
 We found out that there are >150 duplicates of just three separate images in CIFAR-10!  Apparently this has not been discovered or discussed anywhere else and we basically stumbled upon this by exploring the visualizations.
 
@@ -94,13 +93,13 @@ Furthermore there seems to be some quite strange images in CIFAR-10:
 <img width="50%" alt="outlier images in cifar10" src="figures/cifar.outliers.png">
 </p>
 
-And finally, there is a whole class of flatfishes, that seem to be misplaces, but they actually consist of caught flatfishes along with fishermen.
+And finally, there is a whole class of flatfishes in CIFAR-100, that seem to be misplaced, but they actually consist of caught flatfishes along with fishermen.
 
 <p align="center">
 <img alt="flatfish images in cifar10" src="figures/cifar100.flatfish.pdf.png">
 </p>
 
-# Implementation
+## Reproducibility
 
 The figures are in `figures/` and have been created with the script files ending in `.do` in `media/`.  If you want to reproduce those figures you need to use `redo` and change some variables in `redo.py` so that it runs.  And you probably want an available GPU/GPU cluster.
 
