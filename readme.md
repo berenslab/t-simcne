@@ -12,7 +12,7 @@ If you use the code, please cite our paper:
 }
 ```
 
-We show that it is possible to visualize datasets such as CIFAR-10 and CIFAR-100 in 2D with a contrastive learning objective, while preserving a lot of structure!
+We show that it is possible to visualize datasets such as CIFAR-10 and CIFAR-100 in 2D with a contrastive learning objective, while preserving a lot of structure! We call our method t-SimCNE.
 
 ![arch](figures/arch.pdf.png "Subcluster structure in CIFAR-10")
 
@@ -37,7 +37,7 @@ import torchvision
 from matplotlib import pyplot as plt
 from tsimcne.tsimcne import TSimCNE
 
-# get the cifar dataset (make sure to adapt `root` to point to your folder
+# get the cifar dataset (make sure to adapt `data_root` to point to your folder)
 data_root = "experiments/cifar/out/cifar10"
 dataset_train = torchvision.datasets.CIFAR10(
     root=data_root,
@@ -51,11 +51,13 @@ dataset_test = torchvision.datasets.CIFAR10(
 )
 dataset_full = torch.utils.data.ConcatDataset([dataset_train, dataset_test])
 
-# create the object (here we run with less epochs
-# than in the paper [1000, 50, 450]).
+# create the object (here we run t-SimCNE with fewer epochs
+# than in the paper; there we used [1000, 50, 450]).
 tsimcne = TSimCNE(total_epochs=[500, 50, 250])
+
 # train on the augmented/contrastive dataloader (this takes the most time)
 tsimcne.fit(dataset_full)
+
 # map the original images to 2D
 Y = tsimcne.transform(dataset_full)
 
