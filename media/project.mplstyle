@@ -16,6 +16,7 @@ savefig.dpi        : 250
 #figure.edgecolor   : white     ## figure edgecolor
 #figure.frameon     : True      ## enable figure frame
 
+figure.titlesize: x-large
 font.size : 5
 axes.titlesize : larger
 axes.titlepad : 3
