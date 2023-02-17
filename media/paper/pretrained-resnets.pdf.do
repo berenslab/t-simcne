@@ -5,6 +5,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
+from sklearn import model_selection, neighbors
 from tsimcne import plot, redo
 from tsimcne.plot.scalebar import add_scalebar_frac
 
@@ -29,6 +30,7 @@ def main():
         reps = root.parent / f"stats/{dataname}.tsne.pretrained.resnet.npz"
         # redo.redo_ifchange(reps)
         datasets.append(reps)
+        rng = np.random.default_rng(2323**5)
 
         # we have this many representations (one less due to the labels)
         n_cols = len(list(np.load(reps).keys())) - 1
@@ -44,6 +46,13 @@ def main():
             npz = np.load(dataset)
             labels = npz["labels"]
             keys = [k for k in npz.keys() if k != "labels"]
+            train, test = model_selection.train_test_split(
+                np.arange(labels.shape[0]),
+                test_size=10_000,
+                random_state=rng.integers(2**32),
+                stratify=labels,
+            )
+
             for i, (ax, key) in enumerate(zip(axxs.flat, keys)):
 
                 X = npz[key].astype(float)
@@ -62,6 +71,29 @@ def main():
 
                 add_scalebar_frac(ax)
                 ax.margins(0)
+
+                # knn accuracy
+                X_train, X_test, y_train, y_test = (
+                    X[train],
+                    X[test],
+                    labels[train],
+                    labels[test],
+                )
+                knn = neighbors.KNeighborsClassifier(15)
+                knn.fit(X_train, y_train)
+                acc = knn.score(X_test, y_test)
+                acctxt = f"$k$nn = {acc:.0%}"
+
+                # ax.set_title(acctxt, loc="right", fontsize="small")
+                ax.text(
+                    1,
+                    1,
+                    acctxt,
+                    fontsize="small",
+                    transform=ax.transAxes,
+                    ha="right",
+                    va="top",
+                )
 
         plot.add_letters(fig.get_axes())
     metadata = plot.get_default_metadata()
