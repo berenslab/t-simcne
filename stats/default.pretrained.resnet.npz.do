@@ -8,7 +8,6 @@ import numpy as np
 import openTSNE
 import torch
 import umap
-from cnexp import names, redo
 from torchvision import transforms
 from torchvision.models import (
     resnet18,
@@ -17,6 +16,7 @@ from torchvision.models import (
     resnet101,
     resnet152,
 )
+from tsimcne import names, redo
 
 
 class TransformDataset(torch.utils.data.Dataset):
