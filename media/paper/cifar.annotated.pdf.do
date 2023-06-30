@@ -88,11 +88,14 @@ def annotate_cifar(ax, Y, dataset, arrowprops=None):
             abox._arrow_relpos = (1, 0.5)
         else:
             pass
+        # needs to be removed from the layout, otherwise mpl v3.6 and
+        # higher will be confused.
+        # https://github.com/matplotlib/matplotlib/issues/24453
+        abox.set_in_layout(False)
         ax.add_artist(abox)
 
 
 def main():
-
     root = Path("../../experiments/cifar")
     stylef = "../project.mplstyle"
 
