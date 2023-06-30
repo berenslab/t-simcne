@@ -8,10 +8,10 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-from cnexp import names, redo
-from cnexp.plot import add_letters, get_default_metadata
-from cnexp.plot.scalebar import add_scalebar_frac
 from sklearn.neighbors import NearestNeighbors
+from tsimcne import names, redo
+from tsimcne.plot import add_letters, get_default_metadata
+from tsimcne.plot.scalebar import add_scalebar_frac
 
 
 def eprint(*args, **kwargs):
@@ -67,10 +67,10 @@ def annotate_cifar(ax, Y, dataset, arrowprops=None):
             im, lbl = dataset[ix]
             imbox = mpl.offsetbox.OffsetImage(im, zoom=0.5)
             imgs.append(imbox)
-        imrow = mpl.offsetbox.HPacker(children=imgs, pad=0, sep=2)
+        imrow = mpl.offsetbox.HPacker(children=imgs, pad=0, sep=1.5)
         txt = mpl.offsetbox.TextArea(key.capitalize())
         annot = mpl.offsetbox.VPacker(
-            children=[txt, imrow], pad=0, sep=2, align="center"
+            children=[txt, imrow], pad=0, sep=1, align="center"
         )
         abox = mpl.offsetbox.AnnotationBbox(
             annot,
@@ -157,6 +157,7 @@ def main():
             fontsize="medium",
             loc="upper left",
             handletextpad=0.1,
+            columnspacing=0.1,
         )
         legend.get_frame().set_linewidth(plt.rcParams["axes.linewidth"])
         add_scalebar_frac(ax)
