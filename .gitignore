@@ -227,3 +227,4 @@ out/
 .redo.*
 
 slurm-*.out
+/lightning_logs/
