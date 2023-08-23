@@ -16,6 +16,7 @@ from torchvision.models import (
     resnet101,
     resnet152,
 )
+from trimap import TRIMAP
 from tsimcne import names, redo
 
 
@@ -88,7 +89,7 @@ def main():
 
     if dataname != "tiny":
         if dataname == "cifar":
-            seed = 3118
+            seed = None
         else:
             seed = None
         tsimcne_path = (
@@ -131,10 +132,16 @@ def main():
             tsne = openTSNE.TSNE(n_jobs=-1, random_state=98878)
             Y = tsne.fit(ar)
             redname = "t-SNE"
-        else:
+        elif algo == "umap":
             umap1 = umap.UMAP(random_state=98878)
             Y = umap1.fit_transform(ar)
             redname = "UMAP"
+        elif algo == "trimap":
+            trimap = TRIMAP()
+            Y = trimap.fit_transform(ar)
+            redname = "TriMap"
+        else:
+            raise ValueError(f"Unknown {algo = !r}.")
         t1 = time.time()
         eprint(f", {redname} {t1 - t0: .1f}s")
 

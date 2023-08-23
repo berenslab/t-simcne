@@ -6,7 +6,7 @@ import sys
 import time
 from pathlib import Path
 
-from cnexp import dispatch, redo
+from tsimcne import dispatch, redo
 
 if __name__ == "__main__":
     # redo will pass the target name as the second arg.  The directory
