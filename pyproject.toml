@@ -1,9 +1,9 @@
 [project]
 name = "tsimcne"
 version = "0.1.0"
-description = "Contrastive experiments"
+description = "Visualization tool for unsupervised image visualization (ICLR 2023)"
 authors = [
-    {name = "Niklas Böhm", email = "jan-niklas.boehm@uni-tuebingen.de"},
+    {name = "Jan Niklas Böhm", email = "jan-niklas.boehm@uni-tuebingen.de"},
 ]
 dependencies = [
     "torch",
@@ -14,6 +14,7 @@ dependencies = [
 ]
 requires-python = ">=3.9"
 license = {text = "EUPL"}
+readme = "readme.md"
 
 [project.urls]
 homepage = ""
@@ -21,7 +22,9 @@ homepage = ""
 
 [tool]
 [tool.pdm]
+[tool.pdm.build]
+package-dir = "tsimcne"
 
 [build-system]
-requires = ["pdm-pep517"]
-build-backend = "pdm.pep517.api"
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
