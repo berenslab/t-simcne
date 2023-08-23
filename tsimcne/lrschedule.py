@@ -44,6 +44,7 @@ class CosineAnnealingSchedule(_LRScheduler):
         self, opt, final_lr=0, n_epochs=1000, warmup_epochs=10, warmup_lr=0
     ):
         self.opt = opt
+        self.optimizer = self.opt
         self.base_lr = base_lr = opt.defaults["lr"]
         self.final_lr = final_lr
         self.n_epochs = n_epochs

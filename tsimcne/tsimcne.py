@@ -1,5 +1,8 @@
+from copy import deepcopy
+
 import PIL
 import torch
+from lightning import pytorch as pl
 
 from .callback import to_features
 from .imagedistortions import (
@@ -14,7 +17,7 @@ from .optimizers import lr_from_batchsize, make_sgd
 from .train import train
 
 
-class TSimCNE:
+class PLtSimCNE(pl.LightningModule):
     def __init__(
         self,
         model=None,
@@ -22,43 +25,40 @@ class TSimCNE:
         metric=None,
         backbone="resnet18",
         projection_head="mlp",
-        mutate_model_inplace=True,
-        data_transform=None,
-        total_epochs=[1000, 50, 450],
+        n_epochs=100,
         batch_size=512,
         out_dim=2,
-        optimizer="sgd",
-        lr_scheduler="cos_annealing",
+        optimizer_name="sgd",
+        lr_scheduler_name="cos_annealing",
         lr="auto_batch",
+        weight_decay=5e-4,
+        momentum=0.9,
         warmup="auto",
-        freeze_schedule="only_linear",
-        device="cuda:0",
-        num_workers=8,
     ):
+        super().__init__()
         self.model = model
         self.loss = loss
         self.metric = metric
         self.backbone = backbone
         self.projection_head = projection_head
-        self.mutate_model_inplace = mutate_model_inplace
-        self.data_transform = data_transform
+        self.n_epochs = n_epochs
         self.out_dim = out_dim
         self.batch_size = batch_size
-        self.optimizer = optimizer
-        self.lr_scheduler = lr_scheduler
-        self.total_epochs = total_epochs
+        self.optimizer_name = optimizer_name
+        self.lr_scheduler_name = lr_scheduler_name
         self.lr = lr
+        self.weight_decay = weight_decay
+        self.momentum = momentum
         self.warmup = warmup
-        self.freeze_schedule = freeze_schedule
-        self.device = device
-        self.num_workers = num_workers
 
         self._handle_parameters()
 
     def _handle_parameters(self):
         if self.model is None:
             self.model = make_model(
-                backbone=self.backbone, proj_head=self.projection_head
+                backbone=self.backbone,
+                proj_head=self.projection_head,
+                out_dim=self.out_dim,
             )
 
         if self.loss == "infonce":
@@ -77,6 +77,150 @@ class TSimCNE:
                 )
         # else: assume that the loss is a proper pytorch loss function
 
+        if self.lr == "auto_batch":
+            self.lr = lr_from_batchsize(self.batch_size)
+
+        if self.warmup == "auto":
+            self.warmup = 10 if self.max_epochs >= 100 else 0
+
+        if self.optimizer_name != "sgd":
+            raise ValueError(
+                f"Only 'sgd' is supported as optimizer, got {self.optimizer}."
+            )
+
+        if self.lr_scheduler_name != "cos_annealing":
+            raise ValueError(
+                "Only 'cos_annealing' is supported as learning rate "
+                f"scheduler, got {self.lr_scheduler}."
+            )
+
+    def configure_optimizers(self):
+        opt = torch.optim.SGD(
+            self.parameters(),
+            lr=self.lr,
+            momentum=self.momentum,
+            weight_decay=self.weight_decay,
+        )
+        lrsched = CosineAnnealingSchedule(
+            opt, n_epochs=self.n_epochs, warmup_epochs=self.warmup
+        )
+        return [opt], [
+            {"scheduler": lrsched, "interval": "epoch"}
+        ]  # interval "step" for batch update
+
+    def training_step(self, batch):
+        (i1, i2), _lbl = batch
+        samples = torch.vstack((i1, i2))
+
+        features, backbone_features = self.model(samples)
+        # backbone_features, _lbl are unused in infonce loss
+        loss = self.loss(features, backbone_features, _lbl)
+
+        self.log("train_loss", loss)
+        return loss
+
+    def forward(self, batch):
+        x, y = batch
+        if hasattr(x, "__len__") and len(x) == 2:
+            x, _ = x
+        return self.model(x)
+
+
+def tsimcne_transform(
+    model: pl.LightningModule,
+    X: torch.utils.data.Dataset,
+    data_transform=None,
+    batch_size=512,
+    num_workers=8,
+    return_labels: bool = False,
+    return_backbone_feat: bool = False,
+):
+    if data_transform is None:
+        x0 = X[0]
+        if hasattr(x0, "__len__") and len(x0) == 2:
+            sample_img, _lbl = x0
+        else:
+            sample_img = x0
+        if isinstance(sample_img, PIL.Image.Image):
+            size = sample_img.size
+        else:
+            raise ValueError(
+                "The dataset does not return PIL images, "
+                f"got {type(sample_img)} instead."
+            )
+
+        data_transform_none = get_transforms_unnormalized(
+            size=size, setting="none"
+        )
+    else:
+        data_transform_none = data_transform
+
+    # dataset that returns two augmented views of a given
+    # datapoint (and label)
+    dataset_contrastive = TransformedPairDataset(X, data_transform_none)
+    # wrap dataset into dataloader
+    loader = torch.utils.data.DataLoader(
+        dataset_contrastive,
+        batch_size=batch_size,
+        num_workers=num_workers,
+        shuffle=False,
+    )
+
+    trainer = pl.Trainer(devices=1)
+    pred_batches = trainer.predict(model, loader)
+    Y = torch.vstack([x[0] for x in pred_batches]).numpy()
+    backbone_features = torch.vstack([x[1] for x in pred_batches])
+
+    if return_labels and return_backbone_feat:
+        labels = torch.hstack([lbl for _, lbl in loader])
+        return Y, labels, backbone_features
+    elif not return_labels and return_backbone_feat:
+        return Y, backbone_features
+    elif return_labels and not return_backbone_feat:
+        labels = torch.hstack([lbl for _, lbl in loader])
+        return Y, labels
+    else:
+        return Y
+
+
+class TSimCNE:
+    def __init__(
+        self,
+        model=None,
+        loss="infonce",
+        metric=None,
+        backbone="resnet18",
+        projection_head="mlp",
+        data_transform=None,
+        total_epochs=[1000, 50, 450],
+        batch_size=512,
+        out_dim=2,
+        optimizer="sgd",
+        lr_scheduler="cos_annealing",
+        lr="auto_batch",
+        warmup="auto",
+        freeze_schedule="only_linear",
+        num_workers=8,
+    ):
+        self.model = model
+        self.loss = loss
+        self.metric = metric
+        self.backbone = backbone
+        self.projection_head = projection_head
+        self.data_transform = data_transform
+        self.out_dim = out_dim
+        self.batch_size = batch_size
+        self.optimizer = optimizer
+        self.lr_scheduler = lr_scheduler
+        self.total_epochs = total_epochs
+        self.lr = lr
+        self.warmup = warmup
+        self.freeze_schedule = freeze_schedule
+        self.num_workers = num_workers
+
+        self._handle_parameters()
+
+    def _handle_parameters(self):
         if isinstance(self.total_epochs, list):
             self.epoch_schedule = self.total_epochs
         elif isinstance(self.total_epochs, int):
@@ -122,16 +266,6 @@ class TSimCNE:
                 f"number of learning rates (got {len(self.learning_rates)})."
             )
 
-        if self.optimizer != "sgd":
-            raise ValueError(
-                f"Only 'sgd' is supported as optimizer, got {self.optimizer}."
-            )
-
-        if self.lr_scheduler != "cos_annealing":
-            raise ValueError(
-                "Only 'cos_annealing' is supported as learning rate "
-                f"scheduler, got {self.lr_scheduler}."
-            )
         if self.freeze_schedule != "only_linear":
             raise ValueError(
                 "Only 'only_linear' is supported as freeze_schedule, "
@@ -154,13 +288,12 @@ class TSimCNE:
         )
 
     def fit(self, X: torch.utils.data.Dataset):
-        if not self.mutate_model_inplace:
-            from deepcopy import copy
-
-            self.model = copy(self.model)
-
         if self.data_transform is None:
-            sample_img, _lbl = X[0]
+            x0 = X[0]
+            if hasattr(x0, "__len__") and len(x0) == 2:
+                sample_img, _lbl = x0
+            else:
+                sample_img = x0
             if isinstance(sample_img, PIL.Image.Image):
                 size = sample_img.size
             else:
@@ -193,42 +326,63 @@ class TSimCNE:
         it = zip(
             self.epoch_schedule, self.learning_rates, self.warmup_schedules
         )
+        self.models = []
+        self.trainers = []
         for n_stage, (n_epochs, lr, warmup_epochs) in enumerate(it):
-            self._fit_stage(train_dl, n_epochs, lr, warmup_epochs)
-
+            train_kwargs = dict(
+                n_epochs=n_epochs,
+                batch_size=self.batch_size,
+                optimizer_name=self.optimizer,
+                lr_scheduler_name=self.lr_scheduler,
+                lr=lr,
+                warmup=warmup_epochs,
+            )
             if n_stage == 0:
-                mutate_model(
-                    self.model,
+                # initialize the model
+                plmodel = PLtSimCNE(
+                    model=self.model,
+                    loss=self.loss,
+                    metric=self.metric,
+                    backbone=self.backbone,
+                    projection_head=self.projection_head,
+                    out_dim=128,
+                    **train_kwargs,
+                )
+
+            elif n_stage == 1:
+                # modify the model to map down to `out_dim` (2) dimensions
+                p = plmodel
+                model = mutate_model(
+                    p.model,
                     change="lastlin",
                     freeze=True,
                     out_dim=self.out_dim,
                 )
-            elif n_stage == 1:
-                mutate_model(self.model, freeze=False)
+                plmodel = PLtSimCNE(
+                    model=model,
+                    loss=p.loss,
+                    metric=p.metric,
+                    out_dim=self.out_dim,
+                    **train_kwargs,
+                )
 
-    def _fit_stage(
-        self,
-        X: torch.utils.data.DataLoader,
-        n_epochs: int,
-        lr: float,
-        warmup_epochs: int,
-    ):
-        if self.optimizer == "sgd":
-            self.opt = make_sgd(self.model, lr=lr)
+            elif n_stage == 2:
+                model = mutate_model(plmodel.model, freeze=False)
+                plmodel = PLtSimCNE(
+                    model=model,
+                    loss=p.loss,
+                    metric=p.metric,
+                    out_dim=self.out_dim,
+                    **train_kwargs,
+                )
+            trainer = pl.Trainer(max_epochs=n_epochs, devices=1)
+            trainer.fit(model=plmodel, train_dataloaders=train_dl)
+            self.models.append(plmodel)
+            self.trainers.append(trainer)
 
-        if self.lr_scheduler == "cos_annealing":
-            self.lrsched = CosineAnnealingSchedule(
-                self.opt, n_epochs=n_epochs, warmup_epochs=warmup_epochs
-            )
-
-        train(
-            X,
-            self.model,
-            self.loss,
-            self.opt,
-            self.lrsched,
-            device=self.device,
-        )
+        self.plmodel = plmodel
+        self.trainer = trainer
+        return self
 
     def transform(
         self,
@@ -237,91 +391,22 @@ class TSimCNE:
         return_labels: bool = False,
         return_backbone_feat: bool = False,
     ):
-
-        if data_transform is not None:
-            self.data_transform_none = data_transform
-
-        # dataset that returns two augmented views of a given
-        # datapoint (and label)
-        dataset_contrastive = TransformedPairDataset(
-            X, self.data_transform_none
-        )
-        # wrap dataset into dataloader
-        loader = torch.utils.data.DataLoader(
-            dataset_contrastive,
+        return tsimcne_transform(
+            self.plmodel,
+            X,
+            data_transform=data_transform,
             batch_size=self.batch_size,
-            num_workers=self.num_workers,
-            shuffle=False,
+            return_labels=return_labels,
+            return_backbone_feat=return_backbone_feat,
         )
 
-        Y, backbone_features, labels = to_features(
-            self.model, loader, device=self.device
-        )
 
-        if return_labels and return_backbone_feat:
-            return Y, labels, backbone_features
-        elif not return_labels and return_backbone_feat:
-            return Y, backbone_features
-        elif return_labels and not return_backbone_feat:
-            return Y, labels
-        else:
-            return Y
+class DummyLabelDataset(torch.utils.data.Dataset):
+    def __init__(self, dataset):
+        self.dataset = dataset
 
+    def __len__(self):
+        return len(self.dataset)
 
-# def example_test_cifar10():
-
-#     # get the cifar dataset
-#     dataset_train = torchvision.datasets.CIFAR10(
-#         root="experiments/cifar/out/cifar10",
-#         download=True,
-#         train=True,
-#     )
-#     dataset_test = torchvision.datasets.CIFAR10(
-#         root="experiments/cifar/out/cifar10",
-#         download=True,
-#         train=False,
-#     )
-#     dataset_full = torch.utils.data.ConcatDataset(
-#         [dataset_train, dataset_test]
-#     )
-
-#     # mean, std, size correspond to dataset
-#     mean = (0.4914, 0.4822, 0.4465)
-#     std = (0.2023, 0.1994, 0.2010)
-#     size = (32, 32)
-
-#     # data augmentations for contrastive training
-#     transform = get_transforms(
-#         mean,
-#         std,
-#         size=size,
-#         setting="contrastive",
-#     )
-#     # transform_none just normalizes the sample
-#     transform_none = get_transforms(
-#         mean,
-#         std,
-#         size=size,
-#         setting="test_linear_classifier",
-#     )
-
-#     # datasets that return two augmented views of a given datapoint (and label)
-#     dataset_contrastive = TransformedPairDataset(dataset_train, transform)
-#     dataset_visualize = TransformedPairDataset(dataset_full, transform_none)
-
-#     # wrap dataset into dataloader
-#     train_dl = torch.utils.data.DataLoader(
-#         dataset_contrastive, batch_size=1024, shuffle=True
-#     )
-#     orig_dl = torch.utils.data.DataLoader(
-#         dataset_visualize, batch_size=1024, shuffle=False
-#     )
-
-#     # create the object
-#     tsimcne = TSimCNE(total_epochs=[3, 2, 2])
-#     # train on the augmented/contrastive dataloader (this takes the most time)
-#     tsimcne.fit(train_dl)
-#     # fit the original images
-#     Y, labels = tsimcne.transform(orig_dl, return_labels=True)
-
-#     return Y, labels
+    def __getitem__(self, i):
+        return self.dataset[i], 0

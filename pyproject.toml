@@ -1,6 +1,6 @@
 [project]
 name = "tsimcne"
-version = "0.0.1"
+version = "0.1.0"
 description = "Contrastive experiments"
 authors = [
     {name = "Niklas Böhm", email = "jan-niklas.boehm@uni-tuebingen.de"},
@@ -8,7 +8,7 @@ authors = [
 dependencies = [
     "torch",
     "torchvision",
-    "pytorch-lightning",
+    "lightning",
     "numpy",
     "pandas",
     "matplotlib",
