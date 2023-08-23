@@ -10,17 +10,7 @@ dependencies = [
     "torchvision",
     "lightning",
     "numpy",
-    "pandas",
-    "matplotlib",
-    "tqdm",
-    "python-telegram-bot",
-    "ffmpeg-python",
-    "scikit-learn",
-    "hdbscan",
     "pillow",
-    "annoy",
-    "scipy",
-    "medmnist",
 ]
 requires-python = ">=3.9"
 license = {text = "EUPL"}
