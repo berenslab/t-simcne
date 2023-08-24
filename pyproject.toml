@@ -1,6 +1,6 @@
 [project]
 name = "tsimcne"
-version = "0.1.0"
+version = "0.1.1"
 description = "Visualization tool for unsupervised image visualization (ICLR 2023)"
 authors = [
     {name = "Jan Niklas Böhm", email = "jan-niklas.boehm@uni-tuebingen.de"},
