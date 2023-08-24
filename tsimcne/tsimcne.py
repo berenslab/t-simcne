@@ -4,7 +4,6 @@ import PIL
 import torch
 from lightning import pytorch as pl
 
-from .callback import to_features
 from .imagedistortions import (
     TransformedPairDataset,
     get_transforms_unnormalized,
@@ -13,8 +12,6 @@ from .losses.infonce import InfoNCECauchy, InfoNCECosine, InfoNCEGaussian
 from .lrschedule import CosineAnnealingSchedule
 from .models.mutate_model import mutate_model
 from .models.simclr_like import make_model
-from .optimizers import lr_from_batchsize, make_sgd
-from .train import train
 
 
 class PLtSimCNE(pl.LightningModule):
@@ -230,7 +227,7 @@ class TSimCNE:
         n_stages = self.n_stages
 
         if self.lr == "auto_batch":
-            lr = lr_from_batchsize(self.batch_size)
+            lr = self.lr_from_batchsize(self.batch_size)
             self.learning_rates = [lr, lr, lr / 1000][:n_stages]
         elif isinstance(self.lr, list):
             self.learning_rates = self.lr
@@ -399,6 +396,17 @@ class TSimCNE:
             return_labels=return_labels,
             return_backbone_feat=return_backbone_feat,
         )
+
+    @staticmethod
+    def lr_from_batchsize(batch_size: int, /, mode="lin-bs") -> float:
+        if mode == "lin-bs":
+            lr = 0.03 * batch_size / 256
+        elif mode == "sqrt-bs":
+            lr = 0.075 * batch_size**0.5
+        else:
+            raise ValueError(
+                f"Unknown mode for calculating the lr ({mode = !r})"
+            )
 
 
 class DummyLabelDataset(torch.utils.data.Dataset):

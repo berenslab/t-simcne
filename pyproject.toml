@@ -17,7 +17,7 @@ license = {text = "EUPL"}
 readme = "readme.md"
 
 [project.urls]
-homepage = "github.com/berenslab/t-simcne"
+homepage = "https://github.com/berenslab/t-simcne"
 
 
 [tool]
