@@ -1,6 +1,6 @@
 [project]
 name = "tsimcne"
-version = "0.1.1"
+dynamic = ["version"]
 description = "Visualization tool for unsupervised image visualization (ICLR 2023)"
 authors = [
     {name = "Jan Niklas Böhm", email = "jan-niklas.boehm@uni-tuebingen.de"},
@@ -22,8 +22,12 @@ homepage = "https://github.com/berenslab/t-simcne"
 
 [tool]
 [tool.pdm]
-[tool.pdm.build]
-package-dir = "tsimcne"
+# [tool.pdm.build]
+# package-dir = "tsimcne"
+
+[tool.pdm.version]
+source = "file"
+path = "tsimcne/__init__.py"
 
 [build-system]
 requires = ["pdm-backend"]
