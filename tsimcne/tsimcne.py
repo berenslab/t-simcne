@@ -75,10 +75,10 @@ class PLtSimCNE(pl.LightningModule):
         # else: assume that the loss is a proper pytorch loss function
 
         if self.lr == "auto_batch":
-            self.lr = lr_from_batchsize(self.batch_size)
+            self.lr = TSimCNE.lr_from_batchsize(self.batch_size)
 
         if self.warmup == "auto":
-            self.warmup = 10 if self.max_epochs >= 100 else 0
+            self.warmup = 10 if self.n_epochs >= 100 else 0
 
         if self.optimizer_name != "sgd":
             raise ValueError(
@@ -407,6 +407,7 @@ class TSimCNE:
             raise ValueError(
                 f"Unknown mode for calculating the lr ({mode = !r})"
             )
+        return lr
 
 
 class DummyLabelDataset(torch.utils.data.Dataset):
