@@ -18,6 +18,7 @@ readme = "readme.md"
 
 [project.urls]
 homepage = "https://github.com/berenslab/t-simcne"
+documentation = "https://t-simcne.readthedocs.io/en/latest"
 
 
 [tool]

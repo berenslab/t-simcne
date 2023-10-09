@@ -18,7 +18,14 @@ We show that it is possible to visualize datasets such as CIFAR-10 and CIFAR-100
 
 ## Installation
 
-Installation should be as easy as calling `pip install .` in the project root, i. e.:
+Installation should be as easy as calling:
+```bash
+pip install tsimcne
+```
+
+The package is now available on
+[PyPI](https://pypi.org/project/tsimcne/).  If you want to install it
+from source, you can do as follows.
 
 ```bash
 git clone https://github.com/berenslab/t-simcne
@@ -30,6 +37,10 @@ Since the project uses a `pyproject.toml` file, you need to make sure that pip  
 
 
 ## Usage example
+
+The documentation is available at
+[readthedocs](https://t-simcne.readthedocs.io/en/latest/).  Below is a
+simple usage example.
 
 ```python
 import torch
