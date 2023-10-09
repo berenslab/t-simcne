@@ -181,6 +181,97 @@ def tsimcne_transform(
 
 
 class TSimCNE:
+    """The main entry point for fitting tSimCNE on a dataset.
+
+    This class implements the algorithm described in Böhm et
+    al. (`ICLR 2023 <https://openreview.net/forum?id=nI2HmVA0hvt>`__).
+    It learns a model that will map image data points to 2D, allowing
+    an entire dataset to be visualized at once in the form of each
+    datum represented as a dot in the Cartesian plane.
+
+    :param None model: The model to train.  By default it will be
+        constructed from the two parameters `backbone` and
+        `projection_head`.
+
+    :param "infonce" loss: The (contrastive) loss to use.  Default is
+        ``"infonce"`` and currently the only supported one.  For
+        alternatives, see Damrich et al. (`ICLR 2023
+        <https://openreview.net/forum?id=B8a1FcY0vi>`__).
+
+    :param None metric: The metric that is used to calculate the
+        similarity.  Defaults to Euclidean metric (with the Cauchy
+        kernel).  Another option is ``"cosine"`` to get the default
+        SimCLR loss.
+
+    :param "resnet18" backbone: Backbone to use for the contrastive
+        model.  Defaults to ResNet18.  Other options are
+        ``"resnet50"``, etc. or simply pass in a torch model directly.
+
+    :param "mlp" projection_head: The projection head that maps from
+        the backbone features down to the ``"out_dim"``.  Also accepts
+        a torch model.
+
+        The activation function is a ReLU.  By default a multilayer
+        perceptron with one hidden layer going from 512 (output
+        dim. of ResNet18) → 1024 → 128.  The last layer is the output
+        dimension during the first training stage, afterwards the
+        model will be mutated in-place to then map 512 → 1024 → 2.
+
+        Note that if the output dimension of the backbone was changed,
+        then this needs to be appropriately reflected in the
+        projection head as well.
+
+    :param None data_transform: The data augmentations to create the
+        differing views of the input.  By default it will use the same
+        augmentations as written in Böhm et al. (2023); random
+        cropping, greyscaling, color jitter, horizontal flips.  This
+        parameter should be changed with care.
+
+    :param total_epochs: A list of the number of epochs per training
+        stage.  The ratio between the stages should be roughly
+        preserved and it should also be exactly three.  You can also
+        pass a single integer, which will then only fit the first
+        stage.
+
+    :param 512 batch_size: The number of images in one batch.  Note
+        that this parameter should be set as high as the memory of the
+        GPU allows, as contrastive learning benefits from larger batch
+        sizes.  For each image in the batch two view will be
+        generated, so by default the batch size will be ``2 * 512 =
+        1024``.
+
+    :param 2 out_dim: The number of output dimensions.  For the
+        purpose of viusalization you should leave this as 2 (the
+        default).  But tSimCNE can also map into an arbitrary number
+        of dimensions (so it could also be used to plot a dataset in
+        3D, for example).
+
+    :param "sgd" optimizer: The optimizer to use.  Currently only
+        ``"sgd"`` is allowed.
+
+    :param "cos_annealing" lr_scheduler: The learning rate scheduler
+        to use.  Currently only ``"cos_annealing"`` is allowed.
+
+    :param "auto_batch" lr: The learning rate to use.  By default it
+        uses a learning rate adapted to the batch size (as well as the
+        training stage).
+
+    :param "auto" warmup: The number of warmup epochs.  By default it
+        will do 10 epochs of warmup (linearly interpolating from 0 to
+        the initial learning rate) if the number of epochs is at least
+        100, otherwise it will be 0 warmup epochs.
+
+    :param "only_linear" freeze_schedule: The behavior for
+        freezing/unfreezing the network during the different
+        optimization stages.  Only change this, if you know what will
+        happen to the model.  For now, only the default is allowed.
+
+    :param int=8 num_workers: The number of workers for creating the
+        dataloader.  Will be passed to the pytorch DataLoader
+        constructor.
+
+    """
+
     def __init__(
         self,
         model=None,
