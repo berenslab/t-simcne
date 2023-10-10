@@ -56,6 +56,7 @@ API
 ===
 
 .. autoclass:: tsimcne.TSimCNE
+   :members: fit, fit_transform
 
 .. toctree::
    :maxdepth: 2

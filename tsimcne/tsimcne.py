@@ -367,6 +367,23 @@ class TSimCNE:
         return_labels: bool = False,
         return_backbone_feat: bool = False,
     ):
+        """Learn the mapping from the dataset to 2D and return it.
+
+        :param X: The image dataset to be used for training.  Will be
+            wrapped into a data loader automatically.
+
+        :param data_transform: the data transformation to use for
+            calculating the final 2D embedding.  By default it will
+            not perform any data augmentation (as this is only
+            relevant during training).
+
+        :param False return_labels: Whether to return the labels that are
+            part of the dataset.
+
+        :param False return_backbone_feat: Whether to return the
+            high-dimensional features of the backbone.
+
+        """
         self.fit(X)
         return self.transform(
             X,
@@ -376,6 +393,12 @@ class TSimCNE:
         )
 
     def fit(self, X: torch.utils.data.Dataset):
+        """Learn the mapping from the dataset ``X`` to 2D.
+
+        :param X: The image dataset to be used for training.  Will be
+            wrapped into a data loader automatically.
+
+        """
         if self.data_transform is None:
             x0 = X[0]
             if hasattr(x0, "__len__") and len(x0) == 2:
