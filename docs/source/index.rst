@@ -33,6 +33,55 @@ just to give you an idea of how the result can look like:
    An annotated 2D visualization produced by tSimCNE of the CIFAR-10 dataset, showing subcluster structure.
 
 
+Usage example
+====================
+
+.. code-block:: python
+
+   import torch
+   import torchvision
+   from matplotlib import pyplot as plt
+   from tsimcne.tsimcne import TSimCNE
+
+   # get the cifar dataset (make sure to adapt `data_root` to point to your folder)
+   data_root = "experiments/cifar/out/cifar10"
+   dataset_train = torchvision.datasets.CIFAR10(
+       root=data_root,
+       download=True,
+       train=True,
+   )
+   dataset_test = torchvision.datasets.CIFAR10(
+       root=data_root,
+       download=True,
+       train=False,
+   )
+   dataset_full = torch.utils.data.ConcatDataset([dataset_train, dataset_test])
+
+   # create the object (here we run t-SimCNE with fewer epochs
+   # than in the paper; there we used [1000, 50, 450]).
+   tsimcne = TSimCNE(total_epochs=[500, 50, 250])
+
+   # train on the augmented/contrastive dataloader (this takes the most time)
+   tsimcne.fit(dataset_full)
+
+   # map the original images to 2D
+   Y = tsimcne.transform(dataset_full)
+
+   # get the original labels from the dataset
+   labels = [lbl for img, lbl in dataset_full]
+
+   # plot the data
+   fig, ax = plt.subplots()
+   ax.scatter(*Y.T, c=labels)
+   fig.savefig("tsimcne.png")
+
+
+The above code first creates the CIFAR dataset, then creates the
+t-SimCNE object, which is then fitted.  Afterwards we can call
+``tsimcne.transform(X)`` to get the 2D representation of the image
+dataset, which can be used for further analysis, such as
+visualization.
+
 How does it work?
 ================================
 
