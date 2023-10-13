@@ -1,5 +1,3 @@
-from copy import deepcopy
-
 import PIL
 import torch
 from lightning import pytorch as pl
