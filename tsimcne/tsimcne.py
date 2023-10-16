@@ -287,6 +287,7 @@ class TSimCNE:
         warmup="auto",
         freeze_schedule="only_linear",
         num_workers=8,
+        float32_matmul_precision="medium",
     ):
         self.model = model
         self.loss = loss
@@ -303,8 +304,12 @@ class TSimCNE:
         self.warmup = warmup
         self.freeze_schedule = freeze_schedule
         self.num_workers = num_workers
+        self.float32_matmul_precision = float32_matmul_precision
 
         self._handle_parameters()
+
+        if self.float32_matmul_precision:
+            torch.set_float32_matmul_precision(self.float32_matmul_precision)
 
     def _handle_parameters(self):
         if isinstance(self.total_epochs, list):
