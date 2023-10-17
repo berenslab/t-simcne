@@ -265,8 +265,10 @@ class TSimCNE:
         dataloader.  Will be passed to the pytorch DataLoader
         constructor.
 
-    :param bool use_ffcv: Whether to use the ffcv-ssl library to load
-        the data from disk.
+    :param bool | "auto" use_ffcv: Whether to use the ffcv-ssl library
+        to load the data from disk.  If set to ``"auto"`` (default) it
+        will check if the supplied argument is a filepath (to a .beton
+        file) and set it to ``True``, otherwise it will be ``False``.
 
     :param str="medium" float32_matmul_precision: The precision to set
         for ``torch.set_float32_matmul_precision``.  By default it
@@ -437,6 +439,12 @@ class TSimCNE:
             to the .beton file.
 
         """
+
+        if self.use_ffcv == "auto":
+            if isinstance(X, (str, Path)):
+                self.use_ffcv = True
+            else:
+                self.use_ffcv = False
 
         train_dl = self.make_dataloader(X, True, None)
 
