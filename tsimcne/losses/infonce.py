@@ -69,7 +69,7 @@ class InfoNCECauchy(nn.Module):
         sim_bb = 1 / (torch.cdist(b, b) * self.temperature).square().add(1)
         sim_ab = 1 / (torch.cdist(a, b) * self.temperature).square().add(1)
 
-        tempered_alignment = torch.diagonal_copy(sim_ab).log_().mean()
+        tempered_alignment = torch.diagonal(sim_ab).log().mean()
 
         # exclude self inner product
         self_mask = torch.eye(batch_size, dtype=bool, device=sim_aa.device)
