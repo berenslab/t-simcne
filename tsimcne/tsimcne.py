@@ -268,6 +268,12 @@ class TSimCNE:
     :param bool use_ffcv: Whether to use the ffcv-ssl library to load
         the data from disk.
 
+    :param str="medium" float32_matmul_precision: The precision to set
+        for ``torch.set_float32_matmul_precision``.  By default it
+        will be set to ``"medium"``.  Set to ``False`` to leave the
+        default.  (This is mostly as a convenience to silence the
+        warning that will otherwise be shown if the value is unset.)
+
     """
 
     def __init__(
