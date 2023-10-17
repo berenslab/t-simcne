@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import PIL
 import torch
 from lightning import pytorch as pl
@@ -29,6 +31,7 @@ class PLtSimCNE(pl.LightningModule):
         weight_decay=5e-4,
         momentum=0.9,
         warmup="auto",
+        use_ffcv=False,
     ):
         super().__init__()
         self.model = model
@@ -45,6 +48,7 @@ class PLtSimCNE(pl.LightningModule):
         self.weight_decay = weight_decay
         self.momentum = momentum
         self.warmup = warmup
+        self.use_ffcv = use_ffcv
 
         self._handle_parameters()
 
@@ -104,7 +108,10 @@ class PLtSimCNE(pl.LightningModule):
         ]  # interval "step" for batch update
 
     def training_step(self, batch):
-        (i1, i2), _lbl = batch
+        if self.use_ffcv:
+            i1, _lbl, i2 = batch
+        else:
+            (i1, i2), _lbl = batch
         samples = torch.vstack((i1, i2))
 
         features, backbone_features = self.model(samples)
@@ -160,22 +167,6 @@ def tsimcne_transform(
         num_workers=num_workers,
         shuffle=False,
     )
-
-    trainer = pl.Trainer(devices=1)
-    pred_batches = trainer.predict(model, loader)
-    Y = torch.vstack([x[0] for x in pred_batches]).numpy()
-    backbone_features = torch.vstack([x[1] for x in pred_batches])
-
-    if return_labels and return_backbone_feat:
-        labels = torch.hstack([lbl for _, lbl in loader])
-        return Y, labels, backbone_features
-    elif not return_labels and return_backbone_feat:
-        return Y, backbone_features
-    elif return_labels and not return_backbone_feat:
-        labels = torch.hstack([lbl for _, lbl in loader])
-        return Y, labels
-    else:
-        return Y
 
 
 class TSimCNE:
@@ -264,9 +255,18 @@ class TSimCNE:
         optimization stages.  Only change this, if you know what will
         happen to the model.  For now, only the default is allowed.
 
+    :param tuple image_size: The size of the images in the dataset.
+        If not passed will be attempted to be inferred from the
+        dataset.  Required if ``use_ffcv=True`` (as the dataset will
+        need to point to the beton file string and the size
+        information cannot be inferred from that).
+
     :param int=8 num_workers: The number of workers for creating the
         dataloader.  Will be passed to the pytorch DataLoader
         constructor.
+
+    :param bool use_ffcv: Whether to use the ffcv-ssl library to load
+        the data from disk.
 
     """
 
@@ -286,7 +286,9 @@ class TSimCNE:
         lr="auto_batch",
         warmup="auto",
         freeze_schedule="only_linear",
+        image_size=None,
         num_workers=8,
+        use_ffcv=False,
         float32_matmul_precision="medium",
     ):
         self.model = model
@@ -303,7 +305,9 @@ class TSimCNE:
         self.lr = lr
         self.warmup = warmup
         self.freeze_schedule = freeze_schedule
+        self.image_size = image_size
         self.num_workers = num_workers
+        self.use_ffcv = use_ffcv
         self.float32_matmul_precision = float32_matmul_precision
 
         self._handle_parameters()
@@ -363,9 +367,25 @@ class TSimCNE:
                 f"but got {self.freeze_schedule}."
             )
 
+        if self.use_ffcv:
+            try:
+                import ffcv
+
+                ffcv.transforms.RandomGrayscale
+            except ModuleNotFoundError:
+                raise ValueError(
+                    "`use_ffcv` is not False, but `ffcv` is not installed. "
+                    "Install https://github.com/facebookresearch/FFCV-SSL"
+                )
+            except AttributeError:
+                raise ValueError(
+                    "`use_ffcv` is True, but wrong ffcv library is installed. "
+                    "Install https://github.com/facebookresearch/FFCV-SSL"
+                )
+
     def fit_transform(
         self,
-        X: torch.utils.data.Dataset,
+        X: torch.utils.data.Dataset | str,
         data_transform=None,
         return_labels: bool = False,
         return_backbone_feat: bool = False,
@@ -373,7 +393,9 @@ class TSimCNE:
         """Learn the mapping from the dataset to 2D and return it.
 
         :param X: The image dataset to be used for training.  Will be
-            wrapped into a data loader automatically.
+            wrapped into a data loader automatically.  If
+            ``use_ffcv=True``, then it needs to be a string pointing
+            to the .beton file.
 
         :param data_transform: the data transformation to use for
             calculating the final 2D embedding.  By default it will
@@ -388,6 +410,11 @@ class TSimCNE:
 
         """
         self.fit(X)
+        data_transform = (
+            data_transform
+            if data_transform is not None
+            else self.data_transform_none
+        )
         return self.transform(
             X,
             data_transform=data_transform,
@@ -395,48 +422,23 @@ class TSimCNE:
             return_backbone_feat=return_backbone_feat,
         )
 
-    def fit(self, X: torch.utils.data.Dataset):
+    def fit(self, X: torch.utils.data.Dataset | str):
         """Learn the mapping from the dataset ``X`` to 2D.
 
         :param X: The image dataset to be used for training.  Will be
-            wrapped into a data loader automatically.
+            wrapped into a data loader automatically.  If
+            ``use_ffcv=True``, then it needs to be a string pointing
+            to the .beton file.
 
         """
-        if self.data_transform is None:
-            x0 = X[0]
-            if hasattr(x0, "__len__") and len(x0) == 2:
-                sample_img, _lbl = x0
-            else:
-                sample_img = x0
-            if isinstance(sample_img, PIL.Image.Image):
-                size = sample_img.size
-            else:
-                raise ValueError(
-                    "The dataset does not return PIL images, "
-                    f"got {type(sample_img)} instead."
-                )
 
-            # data augmentations for contrastive training
-            self.data_transform = get_transforms_unnormalized(
-                size=size,
-                setting="contrastive",
-            )
+        train_dl = self.make_dataloader(X, True, None)
 
-            self.data_transform_none = get_transforms_unnormalized(
-                size=size, setting="none"
-            )
-
-        # dataset that returns two augmented views of a given
-        # datapoint (and label)
-        dataset_contrastive = TransformedPairDataset(X, self.data_transform)
-        # wrap dataset into dataloader
-        train_dl = torch.utils.data.DataLoader(
-            dataset_contrastive,
-            batch_size=self.batch_size,
-            num_workers=self.num_workers,
-            shuffle=True,
+        self.data_transform_none = get_transforms_unnormalized(
+            size=self.image_size, setting="none", use_ffcv=self.use_ffcv
         )
 
+        self.loader = train_dl
         it = zip(
             self.epoch_schedule, self.learning_rates, self.warmup_schedules
         )
@@ -450,6 +452,7 @@ class TSimCNE:
                 lr_scheduler_name=self.lr_scheduler,
                 lr=lr,
                 warmup=warmup_epochs,
+                use_ffcv=self.use_ffcv,
             )
             if n_stage == 0:
                 # initialize the model
@@ -505,14 +508,126 @@ class TSimCNE:
         return_labels: bool = False,
         return_backbone_feat: bool = False,
     ):
-        return tsimcne_transform(
-            self.plmodel,
-            X,
-            data_transform=data_transform,
-            batch_size=self.batch_size,
-            return_labels=return_labels,
-            return_backbone_feat=return_backbone_feat,
-        )
+        loader = self.make_dataloader(X, False, self.data_transform_none)
+        trainer = pl.Trainer(devices=1)
+        pred_batches = trainer.predict(self.plmodel, loader)
+        Y = torch.vstack([x[0] for x in pred_batches]).numpy()
+        backbone_features = torch.vstack([x[1] for x in pred_batches])
+
+        if return_labels and return_backbone_feat:
+            labels = torch.hstack([lbl for _, lbl in loader])
+            return Y, labels, backbone_features
+        elif not return_labels and return_backbone_feat:
+            return Y, backbone_features
+        elif return_labels and not return_backbone_feat:
+            labels = torch.hstack([lbl for _, lbl in loader])
+            return Y, labels
+        else:
+            return Y
+
+    def make_dataloader(self, X, train_or_test, data_transform):
+        if data_transform is None:
+            if self.image_size is None:
+                if isinstance(X, (str, Path)):
+                    raise ValueError(
+                        "Dataset X is a path, but self.image_size is None. "
+                        "The parameter is required, image size cannot be "
+                        "inferred from X this way."
+                    )
+                x0 = X[0]
+                if hasattr(x0, "__len__") and len(x0) == 2:
+                    sample_img, _lbl = x0
+                else:
+                    sample_img = x0
+                if isinstance(sample_img, PIL.Image.Image):
+                    size = sample_img.size
+                else:
+                    raise ValueError(
+                        "The dataset does not return PIL images, "
+                        f"got {type(sample_img)} instead."
+                    )
+            else:
+                size = self.image_size
+            self.image_size = size
+
+            # data augmentations for contrastive training
+            if train_or_test:
+                data_transform = get_transforms_unnormalized(
+                    size=size, setting="contrastive", use_ffcv=self.use_ffcv
+                )
+            else:
+                data_transform = get_transforms_unnormalized(
+                    size=size, setting="none", use_ffcv=self.use_ffcv
+                )
+
+        if not self.use_ffcv:
+            # dataset that returns two augmented views of a given
+            # datapoint (and label)
+            dataset_contrastive = TransformedPairDataset(X, data_transform)
+            # wrap dataset into dataloader
+            loader = torch.utils.data.DataLoader(
+                dataset_contrastive,
+                batch_size=self.batch_size,
+                num_workers=self.num_workers,
+                shuffle=train_or_test,
+            )
+        else:
+            import ffcv
+
+            if train_or_test:
+                self.data_transform2 = get_transforms_unnormalized(
+                    size=size, setting="contrastive", use_ffcv=self.use_ffcv
+                )
+
+                self.label_pipeline = [
+                    ffcv.fields.basics.IntDecoder(),
+                    ffcv.transforms.ToTensor(),
+                    ffcv.transforms.Squeeze(),
+                ]
+
+                pipelines = {
+                    "image": data_transform,
+                    "image_0": self.data_transform2,
+                    "label": self.label_pipeline,
+                }
+
+                custom_field_mapper = {"image_0": "image"}
+                order = ffcv.loader.OrderOption.QUASI_RANDOM
+
+                loader = ffcv.Loader(
+                    X,
+                    batch_size=self.batch_size,
+                    num_workers=self.num_workers,
+                    order=order,
+                    os_cache=False,
+                    drop_last=False,
+                    pipelines=pipelines,
+                    custom_field_mapper=custom_field_mapper,
+                )
+            else:
+                self.label_pipeline = [
+                    ffcv.fields.basics.IntDecoder(),
+                    ffcv.transforms.ToTensor(),
+                    ffcv.transforms.Squeeze(),
+                ]
+
+                pipelines = {
+                    "image": data_transform,
+                    "label": self.label_pipeline,
+                }
+
+                order = ffcv.loader.OrderOption.SEQUENTIAL
+
+                loader = ffcv.Loader(
+                    X,
+                    batch_size=self.batch_size,
+                    num_workers=self.num_workers,
+                    order=order,
+                    os_cache=False,
+                    drop_last=False,
+                    pipelines=pipelines,
+                )
+            return loader
 
     @staticmethod
     def lr_from_batchsize(batch_size: int, /, mode="lin-bs") -> float:

@@ -1,3 +1,4 @@
+import torch
 from torch.utils.data import ConcatDataset, Dataset
 from torchvision import transforms
 
@@ -43,34 +44,75 @@ def get_transforms(
 
 
 def get_transforms_unnormalized(
-    size, setting="contrastive", crop_scale_lo=0.2, crop_scale_hi=1
+    size,
+    setting="contrastive",
+    crop_scale_lo=0.2,
+    crop_scale_hi=1,
+    use_ffcv=False,
 ):
     crop_scale = crop_scale_lo, crop_scale_hi
-    if setting == "contrastive":
-        return transforms.Compose(
-            [
-                # transforms.RandomRotation(30),
-                transforms.RandomResizedCrop(size=size, scale=crop_scale),
-                transforms.RandomHorizontalFlip(),
-                transforms.RandomApply(
-                    [transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)], p=0.8
-                ),
-                transforms.RandomGrayscale(p=0.2),
-                transforms.ToTensor(),
+    # torchvision transforms
+    if not use_ffcv:
+        if setting == "contrastive":
+            return transforms.Compose(
+                [
+                    # transforms.RandomRotation(30),
+                    transforms.RandomResizedCrop(size=size, scale=crop_scale),
+                    transforms.RandomHorizontalFlip(),
+                    transforms.RandomApply(
+                        [transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)], p=0.8
+                    ),
+                    transforms.RandomGrayscale(p=0.2),
+                    transforms.ToTensor(),
+                ]
+            )
+        elif setting == "train_linear_classifier":
+            return transforms.Compose(
+                [
+                    transforms.RandomResizedCrop(size=size, scale=(0.2, 1.0)),
+                    transforms.RandomHorizontalFlip(),
+                    transforms.ToTensor(),
+                ]
+            )
+        elif setting == "none" or setting == "test_linear_classifier":
+            return transforms.ToTensor()
+        else:
+            raise ValueError(f"Unknown transformation setting {setting!r}")
+
+    # ffcv transforms
+    elif use_ffcv:
+        import ffcv
+        from ffcv import transforms as T
+
+        from .ffcv_augmentation import DivideImageBy255
+
+        if setting == "contrastive":
+            return [
+                T.RandomResizedCrop(output_size=size, scale=crop_scale),
+                T.RandomHorizontalFlip(),
+                T.RandomColorJitter(0.8, 0.4, 0.4, 0.4, 0.1),
+                T.RandomGrayscale(0.2),
+                T.ToTensor(),
+                T.ToTorchImage(convert_back_int16=False),
+                DivideImageBy255(torch.float32),
             ]
-        )
-    elif setting == "train_linear_classifier":
-        return transforms.Compose(
-            [
-                transforms.RandomResizedCrop(size=size, scale=(0.2, 1.0)),
-                transforms.RandomHorizontalFlip(),
-                transforms.ToTensor(),
+        elif setting == "train_linear_classifier":
+            return [
+                T.RandomResizedCrop(output_size=size, scale=(0.2, 1.0)),
+                T.RandomHorizontalFlip(),
+                T.ToTensor(),
+                T.ToTorchImage(convert_back_int16=False),
+                DivideImageBy255(torch.float32),
             ]
-        )
-    elif setting == "none" or setting == "test_linear_classifier":
-        return transforms.ToTensor()
-    else:
-        raise ValueError(f"Unknown transformation setting {setting!r}")
+        elif setting == "none" or setting == "test_linear_classifier":
+            return [
+                ffcv.fields.rgb_image.SimpleRGBImageDecoder(),
+                T.ToTensor(),
+                T.ToTorchImage(convert_back_int16=False),
+                DivideImageBy255(torch.float32),
+            ]
+        else:
+            raise ValueError(f"Unknown transformation setting {setting!r}")
 
 
 class TransformedPairDataset(Dataset):
