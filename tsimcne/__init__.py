@@ -1,3 +1,7 @@
+from pathlib import Path
+
 from .tsimcne import PLtSimCNE, TSimCNE
 
-__version__ = "0.2.0"
+__file_path = Path(__file__).resolve()
+
+__version__ = (__file_path.parent.parent / "VERSION").read_text().strip()
