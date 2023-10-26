@@ -105,12 +105,21 @@ API
 ===
 
 .. autoclass:: tsimcne.TSimCNE
+   :no-index: True
    :members: fit, fit_transform
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Contents
 
+   parameter_guide
+
+
+.. toctree::
+    :maxdepth: 2
+    :caption: API Reference
+
+    api/index
 
 
 Indices and tables
