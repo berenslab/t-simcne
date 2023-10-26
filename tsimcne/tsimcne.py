@@ -641,7 +641,7 @@ class TSimCNE:
                     drop_last=False,
                     pipelines=pipelines,
                 )
-            return loader
+        return loader
 
     @staticmethod
     def lr_from_batchsize(batch_size: int, /, mode="lin-bs") -> float:
