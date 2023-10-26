@@ -128,47 +128,6 @@ class PLtSimCNE(pl.LightningModule):
         return self.model(x)
 
 
-def tsimcne_transform(
-    model: pl.LightningModule,
-    X: torch.utils.data.Dataset,
-    data_transform=None,
-    batch_size=512,
-    num_workers=8,
-    return_labels: bool = False,
-    return_backbone_feat: bool = False,
-):
-    if data_transform is None:
-        x0 = X[0]
-        if hasattr(x0, "__len__") and len(x0) == 2:
-            sample_img, _lbl = x0
-        else:
-            sample_img = x0
-        if isinstance(sample_img, PIL.Image.Image):
-            size = sample_img.size
-        else:
-            raise ValueError(
-                "The dataset does not return PIL images, "
-                f"got {type(sample_img)} instead."
-            )
-
-        data_transform_none = get_transforms_unnormalized(
-            size=size, setting="none"
-        )
-    else:
-        data_transform_none = data_transform
-
-    # dataset that returns two augmented views of a given
-    # datapoint (and label)
-    dataset_contrastive = TransformedPairDataset(X, data_transform_none)
-    # wrap dataset into dataloader
-    loader = torch.utils.data.DataLoader(
-        dataset_contrastive,
-        batch_size=batch_size,
-        num_workers=num_workers,
-        shuffle=False,
-    )
-
-
 class TSimCNE:
     """The main entry point for fitting tSimCNE on a dataset.
 
