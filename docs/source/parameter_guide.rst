@@ -12,9 +12,10 @@ change.
 Here we only present a selection of all of the parameters.  The full
 list with the documentation is in the :ref:`api`.
 
-All of the examples here are done on the CIFAR-10 dataset, which is a
-simple image dataset.  For your convenience, here is a small legend
-with sample pictures.
+All of the examples here are done on the `CIFAR-10 dataset
+<https://www.cs.toronto.edu/~kriz/cifar.html>`__, which is a simple
+image dataset.  For your convenience, here is a small legend with
+sample pictures.
 
 .. figure:: ../../figures/cifar.legend.pdf.png
    :align: center

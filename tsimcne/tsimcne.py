@@ -137,6 +137,9 @@ class TSimCNE:
     an entire dataset to be visualized at once in the form of each
     datum represented as a dot in the Cartesian plane.
 
+    See also :ref:`parameter-guide` for a detailed explanation with
+    examples of a selection of the parameters.
+
     :param None model: The model to train.  By default it will be
         constructed from the two parameters `backbone` and
         `projection_head`.
