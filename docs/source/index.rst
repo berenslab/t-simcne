@@ -32,6 +32,16 @@ just to give you an idea of how the result can look like:
 
    An annotated 2D visualization produced by tSimCNE of the CIFAR-10 dataset, showing subcluster structure.
 
+Installation
+============
+
+The package should be installable via pip with
+
+.. code-block:: bash
+
+   pip install tsimcne
+
+The package is on `PyPA <https://pypi.org/project/tsimcne/>`__.
 
 Usage example
 ====================
