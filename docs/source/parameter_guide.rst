@@ -100,8 +100,24 @@ result in three dimensions or use even more dimensions to facilitate
 some downstream analysis.  For this we provide the parameter
 ``out_dim``.
 
-..
-    TODO show 3D tsimcne visualization
+.. code-block:: python
+
+   t = TSimCNE(out_dim=3)
+   Y = t.fit_transform(X)
+
+.. video:: ../../figures/tsimcne-cifar-3d.mp4
+   :width: 300
+   :height: 300
+   :autoplay:
+   :nocontrols:
+
+
+.. figure:: ../../figures/tsimcne-cifar-3d.png
+   :width: 500px
+   :align: center
+
+   A t-SimCNE visualization in 3D of the CIFAR-10 dataset.
+
 
 Network model
 -------------
