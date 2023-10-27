@@ -106,11 +106,12 @@ some downstream analysis.  For this we provide the parameter
    t = TSimCNE(out_dim=3)
    Y = t.fit_transform(X)
 
-.. video:: ../../figures/tsimcne-cifar-3d.mp4
+.. video:: _static/tsimcne-cifar-3d.mp4
    :width: 300
    :height: 300
    :autoplay:
    :nocontrols:
+   :loop:
 
 
 .. figure:: ../../figures/tsimcne-cifar-3d.png
