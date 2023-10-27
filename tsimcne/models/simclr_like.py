@@ -1,14 +1,80 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torchvision
 
 from ..base import ProjectBase
 
 
-def make_model(seed=None, **kwargs):
+def make_model(
+    backbone,
+    projection_head,
+    seed=None,
+    in_channel=3,
+    hidden_dim=1024,
+    out_dim=128,
+    **kwargs,
+):
     if seed is not None:
         torch.manual_seed(seed)
-    return ResNetFC(**kwargs)
+
+    if isinstance(backbone, str) and isinstance(projection_head, str):
+        return ResNetFC(
+            backbone=backbone,
+            projection_head=projection_head,
+            in_channel=in_channel,
+            hidden_dim=hidden_dim,
+            out_dim=128,
+            **kwargs,
+        )
+
+    elif isinstance(backbone, str):
+        try:
+            model_func, backbone_dim = model_dict[backbone]
+        except KeyError:
+            raise ValueError(
+                f"{backbone = !r} not registered in model_dict."
+                f"  Available backbones are {model_dict.keys()}"
+            )
+        backbone = model_func(in_channel=in_channel)
+        # projection_head =
+
+        return ContrastiveFC(
+            backbone=backbone,
+            projection_head=projection_head,
+            backbone_dim=backbone_dim,
+            hidden_dim=hidden_dim,
+            out_dim=out_dim,
+        )
+
+    elif isinstance(projection_head, str):
+        if "backbone_dim" not in kwargs or kwargs["backbone_dim"] is None:
+            raise ValueError(
+                "'backbone_dim' has not been"
+                " specified and cannot be determined"
+                " when passing custom backbone."
+            )
+        projection_head = make_projection_head(
+            projection_head,
+            in_dim=kwargs["backbone_dim"],
+            hidden_dim=hidden_dim,
+            out_dim=out_dim,
+        )
+        return ContrastiveFC(
+            backbone=backbone,
+            projection_head=projection_head,
+            backbone_dim=backbone_dim,
+            hidden_dim=hidden_dim,
+            out_dim=out_dim,
+        )
+    else:
+        return ContrastiveFC(
+            backbone=backbone,
+            projection_head=projection_head,
+            backbone_dim=None,
+            hidden_dim=None,
+            out_dim=out_dim,
+        )
 
 
 def make_projection_head(name="mlp", in_dim=512, hidden_dim=1024, out_dim=128):
@@ -37,11 +103,35 @@ class SimCLRModel(ProjectBase):
         self.save_lambda_alt(self.outdir / "model.pt", save_data, torch.save)
 
 
+class ContrastiveFC(nn.Module):
+    def __init__(
+        self,
+        backbone,
+        projection_head,
+        backbone_dim,
+        hidden_dim,
+        out_dim=128,
+        in_channel=3,
+    ):
+        super(ContrastiveFC, self).__init__()
+        self.backbone = backbone
+        self.projection_head = projection_head
+        self.backbone_dim = backbone_dim
+        self.hidden_dim = hidden_dim
+        self.out_dim = out_dim
+        self.in_channel = in_channel
+
+    def forward(self, x):
+        h = self.backbone(x)
+        z = self.projection_head(h)
+        return z, h
+
+
 class ResNetFC(nn.Module):
     def __init__(
         self,
         backbone="resnet18",
-        proj_head="mlp",
+        projection_head="mlp",
         in_channel=3,
         out_dim=128,
         hidden_dim=1024,
@@ -59,7 +149,7 @@ class ResNetFC(nn.Module):
         self.backbone = model_func(in_channel=in_channel)
 
         self.projection_head = make_projection_head(
-            proj_head,
+            projection_head,
             in_dim=backbone_dim,
             hidden_dim=hidden_dim,
             out_dim=out_dim,
@@ -244,6 +334,19 @@ class ResNet(nn.Module):
         return out
 
 
+class MobileNetV3(nn.Module):
+    def __init__(self, in_channel=3):
+        super(MobileNetV3, self).__init__()
+        self.in_channel = in_channel
+        self.model = torchvision.models.mobilenet_v3_small()
+        conv1 = self.model.features[0][0]
+        conv1.stride = (1, 1)
+
+    def forward(self, x):
+        feat = self.model.features(x)
+        return self.model.avgpool(feat)
+
+
 def resnet18(**kwargs):
     return ResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
 
@@ -265,4 +368,5 @@ model_dict = {
     "resnet34": [resnet34, 512],
     "resnet50": [resnet50, 2048],
     "resnet101": [resnet101, 2048],
+    "mobilenetv3": [MobileNetV3, 576],
 }

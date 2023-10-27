@@ -56,7 +56,7 @@ class PLtSimCNE(pl.LightningModule):
         if self.model is None:
             self.model = make_model(
                 backbone=self.backbone,
-                proj_head=self.projection_head,
+                projection_head=self.projection_head,
                 out_dim=self.out_dim,
             )
 
