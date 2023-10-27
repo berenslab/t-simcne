@@ -334,11 +334,21 @@ class ResNet(nn.Module):
         return out
 
 
-class MobileNetV3(nn.Module):
-    def __init__(self, in_channel=3):
-        super(MobileNetV3, self).__init__()
+class AdaptedConvNet(nn.Module):
+    """Creates a torchvision model with a modified stride.
+
+    This class takes a ``modelfunc`` as a parameter which should
+    instantiate a torchvision model as in
+    https://pytorch.org/vision/main/models.html which will then have
+    its stride modified so that it's closer to the adapted resnet18
+    (as described in the SimCLR paper).
+
+    """
+
+    def __init__(self, modelfunc, in_channel=3, **kwargs):
+        super(AdaptedConvNet, self).__init__()
         self.in_channel = in_channel
-        self.model = torchvision.models.mobilenet_v3_small()
+        self.model = modelfunc(**kwargs)
         conv1 = self.model.features[0][0]
         conv1.stride = (1, 1)
 
@@ -363,10 +373,34 @@ def resnet101(**kwargs):
     return ResNet(Bottleneck, [3, 4, 23, 3], **kwargs)
 
 
+def mobilenet_v3_large(**kwargs):
+    return AdaptedConvNet(torchvision.models.mobilenet_v3_large, **kwargs)
+
+
+def mobilenet_v3_small(**kwargs):
+    return AdaptedConvNet(torchvision.models.mobilenet_v3_small, **kwargs)
+
+
+def efficientnet_v2_s(**kwargs):
+    return AdaptedConvNet(torchvision.models.efficientnet_v2_s, **kwargs)
+
+
+def efficientnet_v2_m(**kwargs):
+    return AdaptedConvNet(torchvision.models.efficientnet_v2_m, **kwargs)
+
+
+def efficientnet_v2_l(**kwargs):
+    return AdaptedConvNet(torchvision.models.efficientnet_v2_l, **kwargs)
+
+
 model_dict = {
     "resnet18": [resnet18, 512],
     "resnet34": [resnet34, 512],
     "resnet50": [resnet50, 2048],
     "resnet101": [resnet101, 2048],
-    "mobilenetv3": [MobileNetV3, 576],
+    "mobilenetv3_small": [mobilenet_v3_small, 576],
+    "mobilenetv3_large": [mobilenet_v3_large, 960],
+    "efficientnet_v2_s": [efficientnet_v2_s, 1280],
+    "efficientnet_v2_m": [efficientnet_v2_m, 1280],
+    "efficientnet_v2_l": [efficientnet_v2_l, 1280],
 }
