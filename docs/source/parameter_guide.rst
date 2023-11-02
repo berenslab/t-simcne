@@ -56,6 +56,12 @@ By decreasing the number of epochs, we can speed up the computation
 but risk getting a worse embedding quality.  For reference, here are
 some different settings for the number of epochs.
 
+.. code-block:: python
+
+   a = TSimCNE(total_epochs=[400, 25, 75])
+   b = TSimCNE(total_epochs=[775, 25, 200])
+   c = TSimCNE()
+
 .. figure:: ../../figures/cifar.budget.pdf.png
    :alt: Various number of epochs visualized on the CIFAR-10 dataset.
 
