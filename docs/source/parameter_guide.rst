@@ -130,13 +130,22 @@ ourselves to the same ResNet18 architecture as described in the
 smaller kernel size in the first conv block).  But the backbone of the
 network can be changed to anything else that makes sense for your
 application.  Some ideas would be to use a more efficient network such
-as EfficientNet or MobileNet v2.  You could also use an already
+as EfficientNet or MobileNet v3.  You could also use an already
 pretrained network, which can speed up the training.
 
-..
-    TODO show some visualization with different backbones?
 
-    TODO show example of a backbone with pretrained weights?
+
+.. TODO show example of a backbone with pretrained weights?
+
+.. code-block:: python
+
+   t = TSimCNE(backbone="mobilenetv3_small")
+   Y = t.fit_transform(X)
+
+.. figure:: ../../figures/backbones.png
+   :align: center
+
+   Different backbones trained on CIFAR-10.
 
 The projection head can also be changed, although the implications of
 this are quite hard to predict.  Hence, we recommend to leave this as
@@ -145,3 +154,18 @@ change in the backbone).
 
 If the parameter ``model`` is passed to the network, then both the
 ``backbone`` and ``projection_head`` parameters will be ignored.
+
+Currently the backbones that can be passed in as keywords are the
+following.  Note that the ``stride`` is changed in ``resnet18`` and
+well as all of the ``mobilenetv3`` and ``effficientnet`` models, aking
+to the SimCLR paper.
+
+* ``"resnet18"``
+* ``"resnet34"``
+* ``"resnet50"``
+* ``"resnet101"``
+* ``"mobilenetv3_small"``
+* ``"mobilenetv3_large"``
+* ``"efficientnet_v2_s"``
+* ``"efficientnet_v2_m"``
+* ``"efficientnet_v2_l"``
