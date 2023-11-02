@@ -187,7 +187,7 @@ class TSimCNE:
     :param 512 batch_size: The number of images in one batch.  Note
         that this parameter should be set as high as the memory of the
         GPU allows, as contrastive learning benefits from larger batch
-        sizes.  For each image in the batch two view will be
+        sizes.  For each image in the batch two views will be
         generated, so by default the batch size will be ``2 * 512 =
         1024``.
 
