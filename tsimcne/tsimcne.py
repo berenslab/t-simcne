@@ -258,7 +258,7 @@ class TSimCNE:
         freeze_schedule="only_linear",
         image_size=None,
         num_workers=8,
-        use_ffcv=False,
+        use_ffcv="auto",
         float32_matmul_precision="medium",
     ):
         self.model = model
