@@ -169,3 +169,29 @@ to the SimCLR paper.
 * ``"efficientnet_v2_s"``
 * ``"efficientnet_v2_m"``
 * ``"efficientnet_v2_l"``
+
+
+FFCV data loading
+-----------------
+
+There is also the option to use FFCV for loading the data, resulting
+in faster loading time.  This is an optional feature and the library
+is not installed by default (since it proved surprisingly difficult to
+install it directly without issues).
+
+After installation, to use FFCV, simply pass in the size of the images
+and the path to the ``.beton`` file (which needs to have been prepared
+in advance, see `“Writing a dataset to FFCV format”
+<https://docs.ffcv.io/writing_datasets.html#writing-a-dataset-to-ffcv-format>`__).
+
+.. code-block:: python
+
+   t = TSimCNE(image_size=(32, 32))
+   Y = t.fit_transform("cifar10.beton")
+
+The data should load faster compared to using a regular torch dataset.
+To use the functionality, you need to have `FFCV-SSL
+<https://github.com/facebookresearch/FFCV-SSL>`__ (`Bordes et al.,
+2023 <https://arxiv.org/abs/2303.01986>`__) installed, since plain
+FFCV does not support all of the required functionality for
+contrastive learning.
