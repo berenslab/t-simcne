@@ -92,27 +92,3 @@ fig.savefig("tsimcne.png")
 <img alt="label density for cifar100" src="figures/cifar100.labels.pdf.png">
 </p>
 
-## Duplicates and oddities in CIFAR datasets
-
-We found out that there are >150 duplicates of just three separate images in CIFAR-10!  Apparently this has not been discovered or discussed anywhere else and we basically stumbled upon this by exploring the visualizations.
-
-<p align="center">
-<img alt="duplicate images in cifar10" src="figures/cifar.duplicates.pdf.png">
-</p>
-
-Furthermore there seems to be some quite strange images in CIFAR-10:
-
-<p align="center">
-<img width="50%" alt="outlier images in cifar10" src="figures/cifar.outliers.png">
-</p>
-
-And finally, there is a whole class of flatfishes in CIFAR-100, that seem to be misplaced, but they actually consist of caught flatfishes along with fishermen.
-
-<p align="center">
-<img alt="flatfish images in cifar10" src="figures/cifar100.flatfish.pdf.png">
-</p>
-
-## Reproducibility
-
-The figures are in `figures/` and have been created with the script files ending in `.do` in `media/`.  If you want to reproduce those figures you need to use `redo` and change some variables in `redo.py` so that it runs.  And you probably want an available GPU/GPU cluster.
-
