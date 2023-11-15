@@ -145,8 +145,13 @@ pretrained network, which can speed up the training.
 
 .. code-block:: python
 
-   t = TSimCNE(backbone="mobilenetv3_small")
+   t = TSimCNE(backbone="resnet50")
    Y = t.fit_transform(X)
+
+.. note::
+
+   The hyperparameters need to be tuned separately for other
+   backbones, the default is supposed to work well with ``resnet18``.
 
 .. figure:: ../../figures/backbones.png
    :align: center
