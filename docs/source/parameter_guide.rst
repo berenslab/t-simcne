@@ -206,3 +206,11 @@ To use the functionality, you need to have `FFCV-SSL
 2023 <https://arxiv.org/abs/2303.01986>`__) installed, since plain
 FFCV does not support all of the required functionality for
 contrastive learning.
+
+.. admonition:: Speedup
+
+   The speedup on CIFAR datasets is around 25% (with the default
+   pytorch dataset one epoch takes ~25 seconds; with FFCV it takes ~20
+   seconds).  Be aware that the improvement will probably be better
+   for larger images and it always depends on your GPU and computer
+   architecture.  So take the 25% speedup more as a rough estimate.
