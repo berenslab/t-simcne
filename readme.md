@@ -92,3 +92,8 @@ fig.savefig("tsimcne.png")
 <img alt="label density for cifar100" src="figures/cifar100.labels.pdf.png">
 </p>
 
+## Reproducibility
+
+For reproducing the results of the paper, please see the [`iclr2023`
+branch](https://github.com/berenslab/t-simcne/tree/iclr2023) in this
+repository.
