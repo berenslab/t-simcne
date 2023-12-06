@@ -103,9 +103,13 @@ class PLtSimCNE(pl.LightningModule):
         lrsched = CosineAnnealingSchedule(
             opt, n_epochs=self.n_epochs, warmup_epochs=self.warmup
         )
-        return [opt], [
-            {"scheduler": lrsched, "interval": "epoch"}
-        ]  # interval "step" for batch update
+        return {
+            "optimizer": opt,
+            "lr_scheduler": {
+                "scheduler": lrsched,
+                "interval": "epoch",
+            },  # interval "step" for batch update
+        }
 
     def training_step(self, batch):
         if self.use_ffcv:
