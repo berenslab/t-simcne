@@ -182,11 +182,11 @@ class TSimCNE:
         cropping, greyscaling, color jitter, horizontal flips.  This
         parameter should be changed with care.
 
-    :param total_epochs: A list of the number of epochs per training
-        stage.  The ratio between the stages should be roughly
-        preserved and it should also be exactly three.  You can also
-        pass a single integer, which will then only fit the first
-        stage.
+    :param [1000, 50, 450] total_epochs: A list of the number of
+        epochs per training stage.  The ratio between the stages
+        should be roughly preserved and it should also be exactly
+        three.  You can also pass a single integer, which will then
+        only fit the first stage.
 
     :param 512 batch_size: The number of images in one batch.  Note
         that this parameter should be set as high as the memory of the
