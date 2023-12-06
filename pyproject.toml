@@ -12,7 +12,7 @@ dependencies = [
     "numpy",
     "pillow",
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = {text = "EUPL"}
 readme = "readme.md"
 

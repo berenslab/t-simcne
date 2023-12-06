@@ -168,7 +168,7 @@ If the parameter ``model`` is passed to the network, then both the
 
 Currently the backbones that can be passed in as keywords are the
 following.  Note that the ``stride`` is changed in ``resnet18`` and
-well as all of the ``mobilenetv3`` and ``effficientnet`` models, aking
+well as all of the ``mobilenetv3`` and ``efficientnet`` models, akin
 to the SimCLR paper.
 
 * ``"resnet18"``

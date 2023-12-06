@@ -41,7 +41,7 @@ The package should be installable via pip with
 
    pip install tsimcne
 
-The package is on `PyPA <https://pypi.org/project/tsimcne/>`__.
+The package is on `PyPI <https://pypi.org/project/tsimcne/>`__.
 
 Usage example
 ====================
