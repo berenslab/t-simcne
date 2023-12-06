@@ -484,6 +484,25 @@ class TSimCNE:
         return_labels: bool = False,
         return_backbone_feat: bool = False,
     ):
+        """Perform the 2D transform on the dataset, using the trained model.
+
+        :param X: The image dataset to be used for transformation.  Will be
+            wrapped into a data loader automatically.  If
+            ``use_ffcv=True``, then it needs to be a string pointing
+            to the .beton file.
+
+        :param data_transform: the data transformation to use for
+            calculating the final 2D embedding.  By default it will
+            not perform any data augmentation (as this is only
+            relevant during training).
+
+        :param False return_labels: Whether to return the labels that are
+            part of the dataset.
+
+        :param False return_backbone_feat: Whether to return the
+            high-dimensional features of the backbone.
+
+        """
         loader = self.make_dataloader(X, False, self.data_transform_none)
         trainer = pl.Trainer(devices=1)
         pred_batches = trainer.predict(self.plmodel, loader)
