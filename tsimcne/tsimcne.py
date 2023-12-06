@@ -341,7 +341,9 @@ class TSimCNE:
                 f"but got {self.freeze_schedule}."
             )
 
-        if self.use_ffcv:
+    @staticmethod
+    def check_ffcv(use_ffcv):
+        if use_ffcv:
             try:
                 import ffcv
 
@@ -406,6 +408,7 @@ class TSimCNE:
                 self.use_ffcv = True
             else:
                 self.use_ffcv = False
+        self.check_ffcv(self.use_ffcv)
 
         train_dl = self.make_dataloader(X, True, None)
 
