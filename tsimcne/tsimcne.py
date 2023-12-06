@@ -380,11 +380,6 @@ class TSimCNE:
 
         """
         self.fit(X)
-        data_transform = (
-            data_transform
-            if data_transform is not None
-            else self.data_transform_none
-        )
         return self.transform(
             X,
             data_transform=data_transform,
@@ -484,7 +479,12 @@ class TSimCNE:
         return_labels: bool = False,
         return_backbone_feat: bool = False,
     ):
-        loader = self.make_dataloader(X, False, self.data_transform_none)
+        data_transform = (
+            data_transform
+            if data_transform is not None
+            else self.data_transform_none
+        )
+        loader = self.make_dataloader(X, False, data_transform)
         trainer = pl.Trainer(devices=1)
         pred_batches = trainer.predict(self.plmodel, loader)
         Y = torch.vstack([x[0] for x in pred_batches]).numpy()
