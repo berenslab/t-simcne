@@ -54,9 +54,10 @@ class InfoNCECosine(nn.Module):
 
 
 class InfoNCECauchy(nn.Module):
-    def __init__(self, temperature: float = 1):
+    def __init__(self, temperature: float = 1, exaggeration: float = 1):
         super().__init__()
         self.temperature = temperature
+        self.exaggeration = exaggeration
 
     def forward(self, features, backbone_features=None, labels=None):
         # backbone_features and labels are unused
@@ -81,7 +82,7 @@ class InfoNCECauchy(nn.Module):
 
         raw_uniformity = logsumexp_1 + logsumexp_2
 
-        loss = -(tempered_alignment - raw_uniformity / 2)
+        loss = -(self.exaggeration * tempered_alignment - raw_uniformity / 2)
         return loss
 
 
