@@ -24,7 +24,7 @@ def make_model(
             projection_head=projection_head,
             in_channel=in_channel,
             hidden_dim=hidden_dim,
-            out_dim=128,
+            out_dim=out_dim,
             **kwargs,
         )
 
