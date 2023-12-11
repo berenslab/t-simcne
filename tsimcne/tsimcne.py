@@ -438,6 +438,8 @@ class TSimCNE:
                 lr_scheduler_name=self.lr_scheduler,
                 lr=lr,
                 warmup=warmup_epochs,
+                pretrain_out_dim=self.pretrain_out_dim,
+                out_dim=self.out_dim,
                 use_ffcv=self.use_ffcv,
             )
             if n_stage == 0:
@@ -448,7 +450,6 @@ class TSimCNE:
                     metric=self.metric,
                     backbone=self.backbone,
                     projection_head=self.projection_head,
-                    out_dim=self.pretrain_out_dim,
                     **train_kwargs,
                 )
 
@@ -465,7 +466,6 @@ class TSimCNE:
                     model=model,
                     loss=p.loss,
                     metric=p.metric,
-                    out_dim=self.out_dim,
                     **train_kwargs,
                 )
 
