@@ -578,6 +578,7 @@ class TSimCNE:
             )
         else:
             import ffcv
+            from ffcv.fields.basics import IntDecoder
 
             if train_or_test:
                 self.data_transform2 = get_transforms_unnormalized(
@@ -585,7 +586,7 @@ class TSimCNE:
                 )
 
                 self.label_pipeline = [
-                    ffcv.fields.basics.IntDecoder(),
+                    IntDecoder(),
                     ffcv.transforms.ToTensor(),
                     ffcv.transforms.Squeeze(),
                 ]
