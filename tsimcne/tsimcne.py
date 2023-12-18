@@ -475,7 +475,6 @@ class TSimCNE:
                     model=model,
                     loss=p.loss,
                     metric=p.metric,
-                    out_dim=self.out_dim,
                     **train_kwargs,
                 )
             trainer = pl.Trainer(max_epochs=n_epochs, devices=1)
