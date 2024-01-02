@@ -559,6 +559,8 @@ class TSimCNE:
         elif not return_labels and return_backbone_feat:
             return Y, backbone_features
         elif return_labels and not return_backbone_feat:
+            # XXX: this for some reason changes the labels; but I
+            # don't know what causes this!
             labels = torch.hstack([lbl for _, lbl in loader])
             return Y, labels
         else:
