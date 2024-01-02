@@ -233,6 +233,20 @@ class TSimCNE:
         need to point to the beton file string and the size
         information cannot be inferred from that).
 
+    :param 1 devices: The number of devices/accelerators to use (with
+        the PL Trainer).  Will be passed on as is.  Consider this
+        parameter experimental, the effects of using multiple GPUs is
+        not entirely clear (but it should probably be safe to do so).
+
+        Currently, the learning rate is not adjusted to account for
+        multiple devices, please do so yourself; see the `PL
+        documentation
+        <https://lightning.ai/docs/pytorch/stable/accelerators/gpu_faq.html>`__
+        about it.
+
+    :param dict | None trainer_kwargs: The keyword arguments to pass
+        to the Trainer, to use during training.
+
     :param int=8 num_workers: The number of workers for creating the
         dataloader.  Will be passed to the pytorch DataLoader
         constructor.
@@ -268,6 +282,8 @@ class TSimCNE:
         warmup="auto",
         freeze_schedule="only_linear",
         image_size=None,
+        devices=1,
+        trainer_kwargs=None,
         num_workers=8,
         use_ffcv="auto",
         float32_matmul_precision="medium",
@@ -288,6 +304,8 @@ class TSimCNE:
         self.warmup = warmup
         self.freeze_schedule = freeze_schedule
         self.image_size = image_size
+        self.devices = devices
+        self.trainer_kwargs = trainer_kwargs
         self.num_workers = num_workers
         self.use_ffcv = use_ffcv
         self.float32_matmul_precision = float32_matmul_precision
@@ -348,6 +366,19 @@ class TSimCNE:
                 "Only 'only_linear' is supported as freeze_schedule, "
                 f"but got {self.freeze_schedule}."
             )
+
+        if self.devices != 1 and self.lr == "auto_batch":
+            import warnings
+
+            warnings.warn(
+                "devices is not 1, but the learning rate has not been adjusted."
+                "  Please see https://"
+                "lightning.ai/docs/pytorch/stable/accelerators/gpu_faq.html "
+                "for how to set the learning rate when using multiple devices"
+            )
+
+        if self.trainer_kwargs is None:
+            self.trainer_kwargs = dict()
 
     @staticmethod
     def check_ffcv(use_ffcv):
@@ -477,7 +508,11 @@ class TSimCNE:
                     metric=p.metric,
                     **train_kwargs,
                 )
-            trainer = pl.Trainer(max_epochs=n_epochs, devices=1)
+            trainer = pl.Trainer(
+                max_epochs=n_epochs,
+                devices=self.devices,
+                **self.trainer_kwargs,
+            )
             trainer.fit(model=plmodel, train_dataloaders=train_dl)
             self.models.append(plmodel)
             self.trainers.append(trainer)
