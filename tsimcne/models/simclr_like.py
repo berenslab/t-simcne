@@ -357,6 +357,12 @@ class AdaptedConvNet(nn.Module):
         return self.model.avgpool(feat)
 
 
+def pytorch_resnet(in_channel=3):
+    model = torchvision.models.resnet18(pretrained=False)
+    model.fc = torch.nn.Identity()
+    return model
+
+
 def resnet18(**kwargs):
     return ResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
 
@@ -394,7 +400,8 @@ def efficientnet_v2_l(**kwargs):
 
 
 model_dict = {
-    "resnet18": [resnet18, 512],
+    "resnet18": [pytorch_resnet, 512],
+    "resnet18_simclr": [resnet18, 512],
     "resnet34": [resnet34, 512],
     "resnet50": [resnet50, 2048],
     "resnet101": [resnet101, 2048],

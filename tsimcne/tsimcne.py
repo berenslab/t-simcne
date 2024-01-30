@@ -20,7 +20,7 @@ class PLtSimCNE(pl.LightningModule):
         model=None,
         loss="infonce",
         metric=None,
-        backbone="resnet18",
+        backbone="resnet18_simclr",
         projection_head="mlp",
         n_epochs=100,
         batch_size=512,
@@ -160,9 +160,11 @@ class TSimCNE:
         kernel).  Another option is ``"cosine"`` to get the default
         SimCLR loss.
 
-    :param "resnet18" backbone: Backbone to use for the contrastive
-        model.  Defaults to ResNet18.  Other options are
-        ``"resnet50"``, etc. or simply pass in a torch model directly.
+    :param "resnet18_simclr" backbone: Backbone to use for the
+        contrastive model.  Defaults to ResNet18 as defined in the
+        original SimCLR paper (so with a smaller kernel size).  Other
+        options are ``"resnet50"``, etc. or simply pass in a torch
+        model directly.
 
     :param "mlp" projection_head: The projection head that maps from
         the backbone features down to the ``"out_dim"``.  Also accepts
@@ -275,7 +277,7 @@ class TSimCNE:
         model=None,
         loss="infonce",
         metric=None,
-        backbone="resnet18",
+        backbone="resnet18_simclr",
         projection_head="mlp",
         data_transform=None,
         total_epochs=[1000, 50, 450],
