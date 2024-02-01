@@ -130,7 +130,7 @@ class ContrastiveFC(nn.Module):
 class ResNetFC(nn.Module):
     def __init__(
         self,
-        backbone="resnet18",
+        backbone="resnet18_simclr",
         projection_head="mlp",
         in_channel=3,
         out_dim=128,
@@ -358,7 +358,7 @@ class AdaptedConvNet(nn.Module):
 
 
 def pytorch_resnet(in_channel=3):
-    model = torchvision.models.resnet18(pretrained=False)
+    model = torchvision.models.resnet18()
     model.fc = torch.nn.Identity()
     return model
 
