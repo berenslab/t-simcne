@@ -471,7 +471,7 @@ class TSimCNE:
         train_dl = self.make_dataloader(X, True, self.data_transform)
 
         self.data_transform_none = get_transforms_unnormalized(
-            size=self.image_size, setting="none", use_ffcv=self.use_ffcv
+            size=self.image_size, setting="none", use_ffcv=self.use_ffcv # TODO: interferes with data_transforms usage - same as running get_transform for test?
         )
 
         self.loader = train_dl
@@ -564,7 +564,7 @@ class TSimCNE:
         data_transform = (
             data_transform
             if data_transform is not None
-            else self.data_transform_none
+            else self.data_transform_none # TODO: interferes with data_transforms usage
         )
         loader = self.make_dataloader(X, False, data_transform)
         trainer = pl.Trainer(devices=1)
@@ -585,42 +585,48 @@ class TSimCNE:
         else:
             return Y
 
-    def make_dataloader(self, X, train_or_test, data_transform):
-        if data_transform is None:
-            if self.image_size is None:
-                if isinstance(X, (str, Path)):
-                    raise ValueError(
-                        "Dataset X is a path, but self.image_size is None. "
-                        "The parameter is required, image size cannot be "
-                        "inferred from X this way."
-                    )
-                x0 = X[0]
-                if hasattr(x0, "__len__") and len(x0) == 2:
-                    sample_img, _lbl = x0
-                else:
-                    sample_img = x0
-                if isinstance(sample_img, PIL.Image.Image):
-                    size = sample_img.size
-                else:
-                    raise ValueError(
-                        "The dataset does not return PIL images, "
-                        f"got {type(sample_img)} instead."
-                    )
-            else:
-                size = self.image_size
-            self.image_size = size
-
-            # data augmentations for contrastive training
-            if train_or_test:
-                data_transform = get_transforms_unnormalized(
-                    size=size, setting="contrastive", use_ffcv=self.use_ffcv
-                )
-            else:
-                data_transform = get_transforms_unnormalized(
-                    size=size, setting="none", use_ffcv=self.use_ffcv
-                )
+    @staticmethod
+    def get_image_size_from_dataset(X):
+        if isinstance(X, (str, Path)):
+            raise ValueError(
+                "Dataset X is a path, but self.image_size is None. "
+                "The parameter is required, image size cannot be "
+                "inferred from X this way."
+            )
+        x0 = X[0]
+        if hasattr(x0, "__len__") and len(x0) == 2:
+            sample_img, _lbl = x0
         else:
-            data_transform = self.data_transform
+            sample_img = x0
+        if not isinstance(sample_img, PIL.Image.Image):
+            raise ValueError(
+                "The dataset does not return PIL images, "
+                f"got {type(sample_img)} instead."
+            )
+        else:
+            return sample_img.size
+
+    @staticmethod
+    def get_data_transform(self, train_or_test, image_size):
+        # data augmentations for contrastive training
+        if train_or_test:
+            data_transform = get_transforms_unnormalized(
+                size=image_size, setting="contrastive", use_ffcv=self.use_ffcv
+            )
+        else:
+            data_transform = get_transforms_unnormalized(
+                size=image_size, setting="none", use_ffcv=self.use_ffcv
+            )
+        return data_transform
+
+    def make_dataloader(self, X, train_or_test, data_transform):
+        if self.image_size is None:
+            self.image_size = self.get_image_size_from_dataset(X)
+        
+        if data_transform is None:
+            data_transform = self.get_data_transform(X, train_or_test)
+        else:
+            data_transform = self.data_transform #TODO: Problematic line
 
         if not self.use_ffcv:
             if data_transform != "is_included":
