@@ -598,15 +598,15 @@ class TSimCNE:
             return sample_img.size
 
     @staticmethod
-    def get_data_transform(self, train_or_test, image_size):
+    def get_data_transform(train_or_test, image_size, use_ffcv):
         # data augmentations for contrastive training
         if train_or_test:
             data_transform = get_transforms_unnormalized(
-                size=image_size, setting="contrastive", use_ffcv=self.use_ffcv
+                size=image_size, setting="contrastive", use_ffcv=use_ffcv
             )
         else:
             data_transform = get_transforms_unnormalized(
-                size=image_size, setting="none", use_ffcv=self.use_ffcv
+                size=image_size, setting="none", use_ffcv=use_ffcv
             )
         return data_transform
 
@@ -615,9 +615,10 @@ class TSimCNE:
             self.image_size = self.get_image_size_from_dataset(X)
         
         if data_transform is None:
-            data_transform = self.get_data_transform(X, train_or_test)
-        else:
-            data_transform = self.data_transform #TODO: Problematic line
+            if self.data_transform == "is_included": # Keep "is_included" status if that was set prior and no data_transform was passed
+                data_transform = self.data_transform
+            else:
+                data_transform = self.get_data_transform(train_or_test, self.image_size, self.use_ffcv)
 
         if not self.use_ffcv:
             if data_transform != "is_included":
