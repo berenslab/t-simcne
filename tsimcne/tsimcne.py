@@ -470,10 +470,6 @@ class TSimCNE:
 
         train_dl = self.make_dataloader(X, True, self.data_transform)
 
-        self.data_transform_none = get_transforms_unnormalized(
-            size=self.image_size, setting="none", use_ffcv=self.use_ffcv # TODO: interferes with data_transforms usage - same as running get_transform for test?
-        )
-
         self.loader = train_dl
         it = zip(
             self.epoch_schedule, self.learning_rates, self.warmup_schedules
@@ -561,11 +557,6 @@ class TSimCNE:
         :param False return_backbone_feat: Whether to return the
             high-dimensional features of the backbone.
         """
-        data_transform = (
-            data_transform
-            if data_transform is not None
-            else self.data_transform_none # TODO: interferes with data_transforms usage
-        )
         loader = self.make_dataloader(X, False, data_transform)
         trainer = pl.Trainer(devices=1)
         pred_batches = trainer.predict(self.plmodel, loader)
