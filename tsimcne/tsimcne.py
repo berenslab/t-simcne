@@ -265,6 +265,9 @@ class TSimCNE:
         dataloader.  Will be passed to the pytorch DataLoader
         constructor.
 
+    :param dict dl_kwargs: Additional keyword arguments that will be
+        passed on to the pytorch dataloader constructor.
+
     :param bool | "auto" use_ffcv: Whether to use the ffcv-ssl library
         to load the data from disk.  If set to ``"auto"`` (default) it
         will check if the supplied argument is a filepath (to a .beton
@@ -299,6 +302,7 @@ class TSimCNE:
         devices=1,
         trainer_kwargs=None,
         num_workers=8,
+        dl_kwargs=None,
         use_ffcv="auto",
         float32_matmul_precision="medium",
     ):
@@ -321,6 +325,7 @@ class TSimCNE:
         self.devices = devices
         self.trainer_kwargs = trainer_kwargs
         self.num_workers = num_workers
+        self.dl_kwargs = dict() if dl_kwargs is None else dl_kwargs
         self.use_ffcv = use_ffcv
         self.float32_matmul_precision = float32_matmul_precision
 
@@ -634,6 +639,7 @@ class TSimCNE:
                 batch_size=self.batch_size,
                 num_workers=self.num_workers,
                 shuffle=train_or_test,
+                **self.dl_kwargs,
             )
         else:
             import ffcv
