@@ -30,6 +30,7 @@ class PLtSimCNE(lightning.LightningModule, HyperparametersMixin):
         model=None,
         loss="infonce",
         metric=None,
+        temperature=0.5,
         backbone="resnet18_sm_kernel",
         backbone_dim=None,
         projection_head="mlp",
@@ -64,6 +65,7 @@ class PLtSimCNE(lightning.LightningModule, HyperparametersMixin):
         self.model = model
         self.loss = loss
         self.metric = metric
+        self.temperature = temperature
         self.backbone = backbone
         self.backbone_dim = backbone_dim
         self.projection_head = projection_head
@@ -102,11 +104,11 @@ class PLtSimCNE(lightning.LightningModule, HyperparametersMixin):
                 self.metric = "euclidean"
 
             if self.metric == "euclidean":
-                self.loss = InfoNCECauchy()
+                self.loss = InfoNCECauchy(temperature=self.temperature)
             elif self.metric == "cosine":
-                self.loss = InfoNCECosine()
+                self.loss = InfoNCECosine(temperature=self.temperature)
             elif self.metric == "gauss":
-                self.loss = InfoNCEGaussian()
+                self.loss = InfoNCEGaussian(temperature=self.temperaturep)
             else:
                 raise ValueError(
                     f"Unknown {self.metric = !r} for InfoNCE loss"
