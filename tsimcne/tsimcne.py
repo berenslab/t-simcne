@@ -6,6 +6,7 @@ import lightning
 import numpy as np
 import PIL
 import torch
+from annoy import AnnoyIndex
 from lightning.pytorch.core.mixins import HyperparametersMixin
 from sklearn.model_selection import train_test_split
 
@@ -468,6 +469,47 @@ class PLtSimCNE(lightning.LightningModule, HyperparametersMixin):
                 f"Unknown mode for calculating the lr ({mode = !r})"
             )
         return lr
+
+
+class AnnoyClassifier:
+    def __init__(
+        self, n_neighbors, n_trees=20, metric="euclidean", random_state=None
+    ):
+        self.n_neighbors = n_neighbors
+        self.n_trees = n_trees
+        self.metric = metric
+        self.random_state = random_state
+
+        if random_state is None:
+            self.rng = np.random.default_rng()
+            self.seed = self.rng.integers(-(2**31), 2**31)
+        elif isinstance(random_state, np.random.RandomState):
+            self.seed = self.random_state.randint(-(2**31), 2**31)
+        elif isinstance(random_state, np.random.Generator):
+            self.seed = self.random_state.integers(-(2**31), 2**31)
+
+    def fit(self, X, y):
+        self.y = y
+
+        metric = self.metric if self.metric != "cosine" else "angular"
+        self.nn = nn = AnnoyIndex(X.shape[1], metric)
+        nn.set_seed(self.seed)
+
+        [nn.add_item(i, x) for i, x in enumerate(X)]
+        nn.build(self.n_trees)
+
+        return self
+
+    def predict(self, X):
+        nn_ixs = [
+            self.nn.get_nns_by_vector(x, self.n_neighbors + 1)[1:] for x in X
+        ]
+        preds, _counts = stats.mode(self.y[nn_ixs], axis=1, keepdims=False)
+        return preds
+
+    def score(self, X, y):
+        preds = self.predict(X)
+        return (preds == y).mean()
 
 
 class TSimCNE:

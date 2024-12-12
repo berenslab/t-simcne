@@ -10,6 +10,7 @@ dependencies = [
     "torchvision~=0.19",
     "lightning>=2.4",
     "numpy>=2.0.0",
+    "annoy>=1.17.2",
     "pillow",
 ]
 requires-python = ">=3.10"
