@@ -108,7 +108,7 @@ class PLtSimCNE(lightning.LightningModule, HyperparametersMixin):
             elif self.metric == "cosine":
                 self.loss = InfoNCECosine(temperature=self.temperature)
             elif self.metric == "gauss":
-                self.loss = InfoNCEGaussian(temperature=self.temperaturep)
+                self.loss = InfoNCEGaussian(temperature=self.temperature)
             else:
                 raise ValueError(
                     f"Unknown {self.metric = !r} for InfoNCE loss"
