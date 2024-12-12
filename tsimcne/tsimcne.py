@@ -1,26 +1,36 @@
+import zipfile
+from collections import defaultdict
 from pathlib import Path
 
 import lightning
+import numpy as np
 import PIL
 import torch
+from lightning.pytorch.core.mixins import HyperparametersMixin
+from sklearn.model_selection import train_test_split
 
 from .imagedistortions import (
     TransformedPairDataset,
     get_transforms_unnormalized,
 )
 from .losses.infonce import InfoNCECauchy, InfoNCECosine, InfoNCEGaussian
-from .lrschedule import CosineAnnealingSchedule
+from .lrschedule import (
+    ConstantSchedule,
+    CosineAnnealingSchedule,
+    LinearSchedule,
+)
 from .models.mutate_model import mutate_model
 from .models.simclr_like import make_model
 
 
-class PLtSimCNE(lightning.LightningModule):
+class PLtSimCNE(lightning.LightningModule, HyperparametersMixin):
     def __init__(
         self,
         model=None,
         loss="infonce",
         metric=None,
         backbone="resnet18_sm_kernel",
+        backbone_dim=None,
         projection_head="mlp",
         n_epochs=1000,
         batch_size=512,
@@ -29,15 +39,33 @@ class PLtSimCNE(lightning.LightningModule):
         optimizer_name="sgd",
         lr_scheduler_name="cos_annealing",
         lr="auto_batch",
+        dim_annealing="cos_annealing",  # or "piecewise-linear"
+        dof="parameter",  # (inital_dof, final_dof), dof=1.0
         weight_decay=5e-4,
         momentum=0.9,
         warmup_epochs=10,
+        dim_anneal_strategy="pca",
+        batches_per_epoch=None,
+        random_state=None,
+        save_intermediate_feat=False,
+        save_intermediate_bbf=False,
+        eval_ann=True,
+        eval_function=None,
     ):
         super().__init__()
+        ignore_list = [
+            "loss",
+            "backbone",
+            "projection_head",
+            "eval_function",
+            "model",
+        ]
+        self.save_hyperparameters(ignore=ignore_list)
         self.model = model
         self.loss = loss
         self.metric = metric
         self.backbone = backbone
+        self.backbone_dim = backbone_dim
         self.projection_head = projection_head
         self.n_epochs = n_epochs
         self.out_dim = out_dim
@@ -46,9 +74,18 @@ class PLtSimCNE(lightning.LightningModule):
         self.optimizer_name = optimizer_name
         self.lr_scheduler_name = lr_scheduler_name
         self.lr = lr
+        self.dim_annealing = dim_annealing
+        self.dof = dof
         self.weight_decay = weight_decay
         self.momentum = momentum
         self.warmup_epochs = warmup_epochs
+        self.dim_anneal_strategy = dim_anneal_strategy
+        self.batches_per_epoch = batches_per_epoch
+        self.random_state = random_state
+        self.save_intermediate_feat = save_intermediate_feat
+        self.save_intermediate_bbf = save_intermediate_bbf
+        self.eval_ann = eval_ann
+        self.eval_function = eval_function
 
         self._handle_parameters()
 
@@ -58,6 +95,7 @@ class PLtSimCNE(lightning.LightningModule):
                 backbone=self.backbone,
                 projection_head=self.projection_head,
                 out_dim=self.out_dim,
+                backbone_dim=self.backbone_dim,
             )
 
         if self.loss == "infonce":
@@ -76,97 +114,456 @@ class PLtSimCNE(lightning.LightningModule):
                 )
         # else: assume that the loss is a proper pytorch loss function
 
-        if self.lr == "auto_batch":
+        if self.lr == "auto_batch" and self.optimizer_name == "sgd":
             self.lr = self.lr_from_batchsize(self.batch_size)
-
-        if self.optimizer_name != "sgd":
-            raise ValueError(
-                f"Only 'sgd' is supported as optimizer, got {self.optimizer}."
-            )
-
-        if self.lr_scheduler_name != "cos_annealing":
-            raise ValueError(
-                "Only 'cos_annealing' is supported as learning rate "
-                f"scheduler, got {self.lr_scheduler}."
-            )
+        elif self.lr == "auto_batch" and self.optimizer_name.startswith(
+            "adam"
+        ):
+            self.lr = 1e-3
 
         initial_dim = self.out_dim
         final_dim = self.anneal_to_dim
         epochs = self.n_epochs
-        sched = final_dim + 0.5 * (initial_dim + 1 - final_dim) * (
-            1 + torch.cos(torch.pi * torch.arange(1, epochs + 1) / epochs)
-        )
-        dim_mask_schedule = sched.floor().to(int).numpy()
+
+        match self.dim_annealing:
+            case "cos_annealing":
+                # # cosine annealing
+                sched = final_dim + 0.5 * (initial_dim + 1 - final_dim) * (
+                    1
+                    + torch.cos(
+                        torch.pi * torch.arange(1, epochs + 1) / epochs
+                    )
+                )
+                self._dims = sched.floor().to(int).numpy()
+
+            case "piecewise-linear":
+                # piecewise linear annealing
+                a1 = np.full(epochs * 2 // 3, initial_dim, dtype=int)
+                a2 = np.linspace(
+                    initial_dim,
+                    final_dim,
+                    epochs // 8,
+                    dtype=int,
+                    endpoint=False,
+                )
+                a3 = np.full(
+                    epochs - (a1.shape[0] + a2.shape[0]), final_dim, dtype=int
+                )
+                self._dims = np.hstack((a1, a2, a3))
+            case "linear":
+                self._dims = np.linspace(initial_dim, final_dim, self.n_epochs)
+            case "piecewise-cos":
+                # piecewise linear annealing
+                a1 = np.full(epochs * 2 // 3, initial_dim, dtype=int)
+                e2 = epochs // 8
+                sched = final_dim + 0.5 * (initial_dim + 1 - final_dim) * (
+                    1 + torch.cos(torch.pi * torch.arange(1, e2 + 1) / e2)
+                )
+                a2 = sched.floor().to(int).numpy()
+                a3 = np.full(
+                    epochs - (a1.shape[0] + a2.shape[0]), final_dim, dtype=int
+                )
+                self._dims = np.hstack((a1, a2, a3))
+            case _:
+                raise ValueError(
+                    "Allowed values for dim_annealing are "
+                    "'cos_annealing' and 'piecewise-linear', "
+                    f"got {self.dim_annealing!r}."
+                )
+
         self.dim_mask_schedule = [
-            slice(initial_dim if d == initial_dim else d - initial_dim)
-            for d in dim_mask_schedule
+            slice(initial_dim if d >= initial_dim else d - initial_dim)
+            for d in self._dims
         ]
-        self.dim_mask_iter = iter(self.dim_mask_schedule)
+
         self.dim_mask = self.dim_mask_schedule[0]
+        self.train_embeddings = None
+
+        match self.dof:
+            case (initial_dof, final_dof):
+                # final_dof = 128
+                # initial_dof = 1
+
+                n_epochs = self.n_epochs
+                self.dofs = final_dof + 0.5 * (initial_dof - final_dof) * (
+                    1
+                    + torch.cos(
+                        torch.pi * torch.arange(0, n_epochs) / n_epochs
+                    )
+                )
+
+            case "parameter":
+                self.dof_ = torch.nn.Parameter(
+                    torch.tensor(1.0, dtype=torch.float64)
+                )
+                self.dofs = [self.dof_] * self.n_epochs
+
+            case "dim-sub1":
+                self.dofs = [d - 1 for d in self._dims]
+
+            case list(dof):
+                if len(dof) != self.n_epochs:
+                    raise ValueError(
+                        "Got list of dofs, but it is unequal to the number of "
+                        f"epochs. {self.n_epochs} epochs, but {len(dof)=} "
+                        "values supplied."
+                    )
+                self.dofs = dof
+
+            case int(dof) | float(dof):
+                self.dofs = [dof] * self.n_epochs
+
+            case dof:
+                raise ValueError(
+                    f"Got unexpected value for {dof = !r}. "
+                    "Please supply 'parameter', 'dim-sub1', a pair, "
+                    "a list of numbers, or a constant for `dof`."
+                )
+
+        if self.optimizer_name not in ["sgd", "adam", "adamw"]:
+            raise ValueError(
+                "Only 'sgd', 'adam', or 'adamw' is supported as optimizer, "
+                f"got {self.optimizer_name}."
+            )
+
+        # if self.lr_scheduler_name not in ["cos_annealing", "constant"]:
+        #     raise ValueError(
+        #         "Only 'cos_annealing' and 'constant' is supported as "
+        #         f"learning rate scheduler, got {self.lr_scheduler_name}."
+        #     )
+
+        if (
+            self.dim_anneal_strategy is not None
+            and self.dim_anneal_strategy != "pca"
+        ):
+            raise ValueError(
+                "Expected None or 'pca' for dim_anneal strategy, got "
+                f"{self.dim_anneal_strategy}."
+            )
+
+        self.alphas = torch.sin(
+            torch.linspace(0, 1, self.n_epochs) * torch.pi / 2
+        )
+        self.alpha = self.alphas[0]
+
+        if self.random_state is None:
+            self.rng = np.random.default_rng()
+        elif isinstance(self.random_state, np.random.RandomState):
+            seed = self.random_state.randint(-(2**31), 2**31)
+            self.rng = np.random.default_rng(seed)
+        elif isinstance(self.random_state, np.random.Generator):
+            self.rng = self.random_state
 
     def configure_optimizers(self):
-        opt = torch.optim.SGD(
-            self.parameters(),
-            lr=self.lr,
-            momentum=self.momentum,
-            weight_decay=self.weight_decay,
+        if self.optimizer_name == "sgd":
+            opt = torch.optim.SGD(
+                self.parameters(),
+                lr=self.lr,
+                momentum=self.momentum,
+                weight_decay=self.weight_decay,
+            )
+        elif self.optimizer_name == "adam":
+            opt = torch.optim.Adam(
+                self.parameters(),
+                lr=self.lr,
+                weight_decay=self.weight_decay,
+                amsgrad=True,
+            )
+        elif self.optimizer_name == "adamw":
+            opt = torch.optim.AdamW(
+                self.parameters(),
+                lr=self.lr,
+                weight_decay=self.weight_decay,
+                amsgrad=False,
+                eps=1e-6,
+            )
+
+        effective_n_epochs = (
+            self.n_epochs
+            if self.batches_per_epoch is None
+            else self.n_epochs * self.batches_per_epoch
         )
-        lrsched = CosineAnnealingSchedule(
-            opt, n_epochs=self.n_epochs, warmup_epochs=self.warmup_epochs
+        effective_warmup_epochs = (
+            self.warmup_epochs
+            if self.batches_per_epoch is None
+            else self.warmup_epochs * self.batches_per_epoch
         )
+        match self.lr_scheduler_name:
+            case "cos_annealing":
+                lrsched = CosineAnnealingSchedule(
+                    opt,
+                    n_epochs=effective_n_epochs,
+                    warmup_epochs=effective_warmup_epochs,
+                )
+            case "constant":
+                lrsched = ConstantSchedule(
+                    opt,
+                    n_epochs=effective_n_epochs,
+                    warmup_epochs=effective_warmup_epochs,
+                )
+            case "linear":
+                lrsched = LinearSchedule(
+                    opt,
+                    n_epochs=effective_n_epochs,
+                    warmup_epochs=effective_warmup_epochs,
+                )
+            case _:
+                raise ValueError(
+                    "Expected 'cos_annealing', 'constant', or 'linear', got "
+                    f"{self.lr_scheduler_name=!r}"
+                )
+
         return {
             "optimizer": opt,
             "lr_scheduler": {
                 "scheduler": lrsched,
-                "interval": "epoch",
+                "interval": (
+                    "epoch" if self.batches_per_epoch is None else "step"
+                ),
             },  # interval "step" for batch update
         }
 
     def on_train_epoch_start(self):
-        self.dim_mask = next(self.dim_mask_iter)
-        try:
-            lr = self.optimizer.state_dict()["param_groups"][0]["lr"]
-            self.log("lr", lr, prog_bar=True)
-        except (KeyError, AttributeError):
-            pass
+        if hasattr(self, "dof_"):
+            self.log("dof", self.dof_.item(), prog_bar=True)
+        else:
+            self.log("dof", self.cur_dof, prog_bar=False)
+
+        prev_dim_mask = self.dim_mask
+        self.dim_mask = self.dim_mask_schedule[self.current_epoch]
+        self.cur_dof = self.dofs[self.current_epoch]
+
+        _embeddings = self._embeddings = self.train_embeddings
+
+        # next_output_dim = self.out_dim + self.dim_mask.stop
+        # vv and next_output_dim < 10
+        do_pca = (
+            self.dim_anneal_strategy == "pca"
+            and prev_dim_mask != self.dim_mask
+            and not isinstance(self.model.projection_head, torch.nn.Identity)
+        )
+        if do_pca:
+            layer = self.model.projection_head.layers[2]
+            self.weights = weights = layer.weight[prev_dim_mask]
+            # bias = layer.bias[prev_dim_mask]
+
+            # weights.T.cpu().detach()
+            embs = torch.vstack(_embeddings).cpu().detach().float()
+            unused_w = (
+                layer.weight[self.dim_mask.stop :]
+                .cpu()
+                .detach()
+                .float()
+                .T.numpy()
+            )
+            # unused_b = (
+            #     layer.bias[self.dim_mask.stop :].cpu().detach().float().numpy()
+            # )
+
+            from sklearn.decomposition import PCA
+
+            self.pca = pca = PCA(
+                min(self.out_dim, self.out_dim + self.dim_mask.stop)
+            ).fit(embs)
+            # make_pipeline(
+            #     StandardScaler(with_std=False),
+            #     TruncatedSVD(
+            #         min(self.out_dim, self.out_dim + self.dim_mask.stop)
+            #     ),
+            # )
+
+            # _pca_w = pca[1].transform(weights.T.cpu().detach().float().numpy())
+            _pca_w = (
+                weights.T.cpu().detach().float().numpy() @ pca.components_.T
+            )
+            # _e = embs.numpy()
+            # _w = weights.detach().cpu().numpy()
+            rotated_w = _pca_w  # * _w.std()  # + _w.mean()
+            transformed_weight = np.hstack((rotated_w, unused_w))
+
+            odict = self.optimizers().optimizer.state
+            mdict = odict[layer.weight]
+            # mdict.clear()
+            # print(len(odict.keys()), odict[weights])
+            ## attempt at pca-transforming the momentum
+            mbuf = mdict["momentum_buffer"]
+            momentum = mdict["momentum_buffer"][prev_dim_mask]
+            unused_m = (
+                mdict["momentum_buffer"][self.dim_mask.stop :]
+                .cpu()
+                .detach()
+                .float()
+                .T.numpy()
+            )
+            _pca_m = (
+                momentum.T.cpu().detach().float().numpy() @ pca.components_.T
+            )
+            # _m = mbuf.detach().cpu().numpy()
+            rotated_m = _pca_m
+            transformed_mbuf = np.hstack((rotated_m, unused_m))
+            mdict["momentum_buffer"][:] = torch.from_numpy(
+                transformed_mbuf.T
+            ).to(dtype=mbuf.dtype)
+
+            # rotated_b = pca.transform(
+            #     np.array([bias.cpu().detach().float().numpy()])
+            # ).squeeze()
+            # transformed_bias = np.hstack((rotated_b, unused_b))
+
+            self.pca = pca
+            self.rotated_w = rotated_w
+            self.transformed_weight = transformed_weight
+
+            # raise RuntimeError("now go inspect")
+            sd = dict(
+                weight=torch.from_numpy(transformed_weight.T).to(
+                    dtype=weights.dtype
+                ),
+                # bias=torch.from_numpy(transformed_bias).bfloat16(),
+            )
+            layer.load_state_dict(sd, strict=False)
+
+        # reset the train embeddings for the next epoch
+        self.train_embeddings = []
 
     def training_step(self, batch, batch_idx):
         # calls self.forward()
         features, backbone_features = self(batch)
 
-        assert features.size(0) % 2 == 0, f"{features.shape = } is wrong!"
-        # backbone_features are not used in infonce loss
-        loss = self.loss(features, backbone_features)
+        # assert features.size(0) % 2 == 0, f"{features.shape = } is wrong!"
 
-        return loss
+        # backbone_features are not used in infonce loss
+        # loss = self.loss(features, alpha=self.alpha)
+        lossd = self.loss(features)
+
+        return lossd
+
+    @staticmethod
+    def fix_ffcv_batch(batch):
+        if len(batch) == 3:
+            x1, lbl, x2 = batch
+            x = torch.vstack((x1, x2))
+            batch = x, lbl
+        return batch
 
     def on_train_batch_end(self, outputs, batch, batch_idx):
-        self.log("train_loss", outputs["loss"].item(), prog_bar=True)
+        self.log_dict(outputs, prog_bar=True)
 
-    def validation_step(self, batch, batch_idx):
-        # calls self.forward()
-        features, backbone_features = self(batch)
+    def on_validation_epoch_start(self):
+        self.val_batches = defaultdict(list)
+        self.cur_dof = self.dofs[self.current_epoch]
 
-        # backbone_features are unused in infonce loss
-        loss = self.loss(features, backbone_features)
+    def validation_step(self, batch, batch_idx, dataloader_idx=0):
+        batch = self.fix_ffcv_batch(batch)
+        if dataloader_idx == 0:
+            # calls self.forward()
+            features, backbone_features = self(batch)
 
-        return loss
+            # backbone_features are unused in infonce loss
+            loss = self.loss(features)
 
-    def on_validation_batch_end(self, outputs, batch, batch_idx):
-        self.log("val_loss", outputs.item(), prog_bar=True)
+            return loss
+
+        elif dataloader_idx == 1:
+            features, backbone_features = self(batch)
+            labels = batch[1]
+            return dict(
+                Z_batch=features,
+                H_batch=backbone_features,
+                labels_batch=labels,
+            )
+
+    def on_validation_batch_end(
+        self, outputs, batch, batch_idx, dataloader_idx=0
+    ):
+        if dataloader_idx == 0:
+            renamed_outputs = {f"val_{k}": v for k, v in outputs.items()}
+            self.log_dict(
+                renamed_outputs,
+                prog_bar=False,
+                add_dataloader_idx=False,
+            )
+        elif dataloader_idx == 1:
+            [self.val_batches[k].append(v) for k, v in outputs.items()]
+
+    def on_validation_epoch_end(self):
+        if self.trainer.validating and len(self.val_batches["Z_batch"]) > 0:
+            Z = torch.vstack(self.val_batches["Z_batch"]).cpu().float().numpy()
+            H = torch.vstack(self.val_batches["H_batch"]).cpu().float().numpy()
+            labels = (
+                torch.hstack(self.val_batches["labels_batch"]).cpu().numpy()
+            )
+
+            save_any = (
+                self.save_intermediate_feat or self.save_intermediate_bbf
+            )
+            p = Path(self.logger.log_dir)
+            zname = p / "intermediate_emb.zip"
+            stepsf = p / "steps.csv"
+            if save_any:
+                if not stepsf.exists():
+                    stepsf.write_text("global_step,epoch\n")
+                with stepsf.open("a") as f:
+                    f.write(f"{self.global_step},{self.current_epoch}\n")
+
+                with zipfile.ZipFile(zname, "a") as zipf:
+
+                    if "labels.npy" not in zipf.namelist():
+                        with zipf.open("labels.npy", "w") as f:
+                            np.save(f, labels)
+
+                    if self.save_intermediate_feat:
+                        with zipf.open(
+                            f"Z/step-{self.global_step:05d}.npy", "w"
+                        ) as f:
+                            np.save(f, Z)
+                    if self.save_intermediate_bbf:
+                        with zipf.open(
+                            f"H/step-{self.global_step:05d}.npy", "w"
+                        ) as f:
+                            np.save(f, H)
+
+            if self.eval_ann:
+                for name, X in dict(Z=Z, H=H).items():
+                    X_train, X_test, y_train, y_test = train_test_split(
+                        X,
+                        labels,
+                        test_size=0.15,
+                        random_state=self.rng.integers(2**32),
+                    )
+                    # import time
+
+                    # t0 = time.time()
+                    ann = AnnoyClassifier(15)
+                    acc = ann.fit(X_train, y_train).score(X_test, y_test)
+                    # t1 = time.time()
+                    self.log(f"ann({name})", acc, prog_bar=True)
+                    # self.log(f"t_{name}", t1 - t0)
+
+            if callable(self.eval_function):
+                edict = self.eval_function(
+                    Z=Z,
+                    H=H,
+                    labels=labels,
+                    step=self.global_step,
+                    epoch=self.current_epoch,
+                )
+                self.log_dict(edict, add_dataloader_idx=False, prog_bar=True)
 
     def on_predict_epoch_start(self):
         self.dim_mask = self.dim_mask_schedule[-1]
 
-    def predict_step(self, batch, batch_idx):
-        return self(batch)
-
     # def test_step(self, batch, batch_idx): ...
 
     def forward(self, batch):
+        batch = self.fix_ffcv_batch(batch)
         x, y = batch
         f, bb = self.model(x)
         return f[:, self.dim_mask], bb
+
+    def on_fit_end(self):
+        train_dataset = self.trainer.datamodule.train_dataloader()
+        self.save_hyperparameters(dict(n_batches=len(train_dataset)))
 
     @staticmethod
     def lr_from_batchsize(batch_size: int, /, mode="lin-bs") -> float:
@@ -696,7 +1093,9 @@ class TSimCNE:
 
             if train_or_test:
                 self.data_transform2 = get_transforms_unnormalized(
-                    size=size, setting="contrastive", use_ffcv=self.use_ffcv
+                    size=self.image_size,
+                    setting="contrastive",
+                    use_ffcv=self.use_ffcv,
                 )
 
                 self.label_pipeline = [
