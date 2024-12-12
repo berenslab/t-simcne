@@ -71,7 +71,9 @@ class PLtSimCNE(lightning.LightningModule):
             elif self.metric == "gauss":
                 self.loss = InfoNCEGaussian()
             else:
-                raise ValueError(f"Unknown {self.metric=!r} for InfoNCE loss")
+                raise ValueError(
+                    f"Unknown {self.metric = !r} for InfoNCE loss"
+                )
         # else: assume that the loss is a proper pytorch loss function
 
         if self.lr == "auto_batch":
@@ -132,7 +134,7 @@ class PLtSimCNE(lightning.LightningModule):
         # calls self.forward()
         features, backbone_features = self(batch)
 
-        assert features.size(0) % 2 == 0, f"{features.shape=} is wrong!"
+        assert features.size(0) % 2 == 0, f"{features.shape = } is wrong!"
         # backbone_features are not used in infonce loss
         loss = self.loss(features, backbone_features)
 
@@ -174,7 +176,7 @@ class PLtSimCNE(lightning.LightningModule):
             lr = 0.075 * batch_size**0.5
         else:
             raise ValueError(
-                f"Unknown mode for calculating the lr ({mode=!r})"
+                f"Unknown mode for calculating the lr ({mode = !r})"
             )
         return lr
 
@@ -396,14 +398,14 @@ class TSimCNE:
         else:
             raise ValueError(
                 'Expected "auto_batch" or a list of learning rates '
-                f" but got {self.lr=!r}."
+                f" but got {self.lr = !r}."
             )
 
         if self.n_stages != len(self.learning_rates):
             raise ValueError(
                 f"Got {self.total_epochs} for total epochs, but "
                 f"{self.learning_rates} for learning rates "
-                f"(due to {self.lr=!r})."
+                f"(due to {self.lr = !r})."
             )
 
         if self.warmup == "auto":
@@ -413,7 +415,7 @@ class TSimCNE:
         else:
             raise ValueError(
                 'Expected "auto" or a list of warmup epochs '
-                f"but got {self.warmup=!r}."
+                f"but got {self.warmup = !r}."
             )
 
         if len(self.warmup_schedules) != self.n_stages:
@@ -433,8 +435,8 @@ class TSimCNE:
             import warnings
 
             warnings.warn(
-                "devices is not 1, but the learning rate has not been "
-                "adjusted.  Please see https://"
+                "devices is not 1, but the learning rate has not been adjusted."
+                "  Please see https://"
                 "lightning.ai/docs/pytorch/stable/accelerators/gpu_faq.html "
                 "for how to set the learning rate when using multiple devices"
             )
@@ -665,8 +667,7 @@ class TSimCNE:
         if data_transform is None:
             if (
                 self.data_transform == "is_included"
-            ):  # Keep "is_included" status if that was set prior and
-                # no data_transform was passed
+            ):  # Keep "is_included" status if that was set prior and no data_transform was passed
                 data_transform = self.data_transform
             else:
                 data_transform = self.get_data_transform(
@@ -695,9 +696,7 @@ class TSimCNE:
 
             if train_or_test:
                 self.data_transform2 = get_transforms_unnormalized(
-                    size=self.image_size,
-                    setting="contrastive",
-                    use_ffcv=self.use_ffcv,
+                    size=size, setting="contrastive", use_ffcv=self.use_ffcv
                 )
 
                 self.label_pipeline = [
@@ -758,7 +757,7 @@ class TSimCNE:
             lr = 0.075 * batch_size**0.5
         else:
             raise ValueError(
-                f"Unknown mode for calculating the lr ({mode=!r})"
+                f"Unknown mode for calculating the lr ({mode = !r})"
             )
         return lr
 
