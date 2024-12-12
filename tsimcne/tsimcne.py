@@ -1,8 +1,8 @@
 from pathlib import Path
 
+import lightning
 import PIL
 import torch
-from lightning import pytorch as pl
 
 from .imagedistortions import (
     TransformedPairDataset,
@@ -14,25 +14,24 @@ from .models.mutate_model import mutate_model
 from .models.simclr_like import make_model
 
 
-class PLtSimCNE(pl.LightningModule):
+class PLtSimCNE(lightning.LightningModule):
     def __init__(
         self,
         model=None,
         loss="infonce",
         metric=None,
-        backbone="resnet18_simclr",
+        backbone="resnet18_sm_kernel",
         projection_head="mlp",
-        n_epochs=100,
+        n_epochs=1000,
         batch_size=512,
-        out_dim=2,
-        pretrain_out_dim=128,
+        out_dim=128,
+        anneal_to_dim=2,
         optimizer_name="sgd",
         lr_scheduler_name="cos_annealing",
         lr="auto_batch",
         weight_decay=5e-4,
         momentum=0.9,
-        warmup="auto",
-        use_ffcv=False,
+        warmup_epochs=10,
     ):
         super().__init__()
         self.model = model
@@ -42,15 +41,14 @@ class PLtSimCNE(pl.LightningModule):
         self.projection_head = projection_head
         self.n_epochs = n_epochs
         self.out_dim = out_dim
-        self.pretrain_out_dim = pretrain_out_dim
+        self.anneal_to_dim = anneal_to_dim
         self.batch_size = batch_size
         self.optimizer_name = optimizer_name
         self.lr_scheduler_name = lr_scheduler_name
         self.lr = lr
         self.weight_decay = weight_decay
         self.momentum = momentum
-        self.warmup = warmup
-        self.use_ffcv = use_ffcv
+        self.warmup_epochs = warmup_epochs
 
         self._handle_parameters()
 
@@ -59,7 +57,7 @@ class PLtSimCNE(pl.LightningModule):
             self.model = make_model(
                 backbone=self.backbone,
                 projection_head=self.projection_head,
-                out_dim=self.pretrain_out_dim,
+                out_dim=self.out_dim,
             )
 
         if self.loss == "infonce":
@@ -79,10 +77,7 @@ class PLtSimCNE(pl.LightningModule):
         # else: assume that the loss is a proper pytorch loss function
 
         if self.lr == "auto_batch":
-            self.lr = TSimCNE.lr_from_batchsize(self.batch_size)
-
-        if self.warmup == "auto":
-            self.warmup = 10 if self.n_epochs >= 100 else 0
+            self.lr = self.lr_from_batchsize(self.batch_size)
 
         if self.optimizer_name != "sgd":
             raise ValueError(
@@ -95,6 +90,20 @@ class PLtSimCNE(pl.LightningModule):
                 f"scheduler, got {self.lr_scheduler}."
             )
 
+        initial_dim = self.out_dim
+        final_dim = self.anneal_to_dim
+        epochs = self.n_epochs
+        sched = final_dim + 0.5 * (initial_dim + 1 - final_dim) * (
+            1 + torch.cos(torch.pi * torch.arange(1, epochs + 1) / epochs)
+        )
+        dim_mask_schedule = sched.floor().to(int).numpy()
+        self.dim_mask_schedule = [
+            slice(initial_dim if d == initial_dim else d - initial_dim)
+            for d in dim_mask_schedule
+        ]
+        self.dim_mask_iter = iter(self.dim_mask_schedule)
+        self.dim_mask = self.dim_mask_schedule[0]
+
     def configure_optimizers(self):
         opt = torch.optim.SGD(
             self.parameters(),
@@ -103,7 +112,7 @@ class PLtSimCNE(pl.LightningModule):
             weight_decay=self.weight_decay,
         )
         lrsched = CosineAnnealingSchedule(
-            opt, n_epochs=self.n_epochs, warmup_epochs=self.warmup
+            opt, n_epochs=self.n_epochs, warmup_epochs=self.warmup_epochs
         )
         return {
             "optimizer": opt,
@@ -113,25 +122,63 @@ class PLtSimCNE(pl.LightningModule):
             },  # interval "step" for batch update
         }
 
-    def training_step(self, batch):
-        if self.use_ffcv:
-            i1, _lbl, i2 = batch
-        else:
-            (i1, i2), _lbl = batch
-        samples = torch.vstack((i1, i2))
+    def on_train_epoch_start(self):
+        self.dim_mask = next(self.dim_mask_iter)
+        try:
+            lr = self.optimizer.state_dict()["param_groups"][0]["lr"]
+            self.log("lr", lr, prog_bar=True)
+        except (KeyError, AttributeError):
+            pass
 
-        features, backbone_features = self.model(samples)
-        # backbone_features, _lbl are unused in infonce loss
-        loss = self.loss(features, backbone_features, _lbl)
+    def training_step(self, batch, batch_idx):
+        # calls self.forward()
+        features, backbone_features = self(batch)
 
-        self.log("train_loss", loss)
+        assert features.size(0) % 2 == 0, f"{features.shape = } is wrong!"
+        # backbone_features are not used in infonce loss
+        loss = self.loss(features, backbone_features)
+
         return loss
+
+    def on_train_batch_end(self, outputs, batch, batch_idx):
+        self.log("train_loss", outputs["loss"].item(), prog_bar=True)
+
+    def validation_step(self, batch, batch_idx):
+        # calls self.forward()
+        features, backbone_features = self(batch)
+
+        # backbone_features are unused in infonce loss
+        loss = self.loss(features, backbone_features)
+
+        return loss
+
+    def on_validation_batch_end(self, outputs, batch, batch_idx):
+        self.log("val_loss", outputs.item(), prog_bar=True)
+
+    def on_predict_epoch_start(self):
+        self.dim_mask = self.dim_mask_schedule[-1]
+
+    def predict_step(self, batch, batch_idx):
+        return self(batch)
+
+    # def test_step(self, batch, batch_idx): ...
 
     def forward(self, batch):
         x, y = batch
-        if hasattr(x, "__len__") and len(x) == 2:
-            x, _ = x
-        return self.model(x)
+        f, bb = self.model(x)
+        return f[:, self.dim_mask], bb
+
+    @staticmethod
+    def lr_from_batchsize(batch_size: int, /, mode="lin-bs") -> float:
+        if mode == "lin-bs":
+            lr = 0.03 * batch_size / 256
+        elif mode == "sqrt-bs":
+            lr = 0.075 * batch_size**0.5
+        else:
+            raise ValueError(
+                f"Unknown mode for calculating the lr ({mode = !r})"
+            )
+        return lr
 
 
 class TSimCNE:
@@ -286,13 +333,13 @@ class TSimCNE:
         model=None,
         loss="infonce",
         metric=None,
-        backbone="resnet18_simclr",
+        backbone="resnet18_sm_kernel",
         projection_head="mlp",
         data_transform=None,
-        total_epochs=[1000, 50, 450],
+        total_epochs=[1000],
         batch_size=512,
-        out_dim=2,
-        pretrain_out_dim=128,
+        out_dim=128,
+        anneal_to_dim=2,
         optimizer="sgd",
         lr_scheduler="cos_annealing",
         lr="auto_batch",
@@ -303,7 +350,6 @@ class TSimCNE:
         trainer_kwargs=None,
         num_workers=8,
         dl_kwargs=None,
-        use_ffcv="auto",
         float32_matmul_precision="medium",
     ):
         self.model = model
@@ -313,7 +359,7 @@ class TSimCNE:
         self.projection_head = projection_head
         self.data_transform = data_transform
         self.out_dim = out_dim
-        self.pretrain_out_dim = pretrain_out_dim
+        self.anneal_to_dim = anneal_to_dim
         self.batch_size = batch_size
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
@@ -326,7 +372,6 @@ class TSimCNE:
         self.trainer_kwargs = trainer_kwargs
         self.num_workers = num_workers
         self.dl_kwargs = dict() if dl_kwargs is None else dl_kwargs
-        self.use_ffcv = use_ffcv
         self.float32_matmul_precision = float32_matmul_precision
 
         self._handle_parameters()
@@ -528,7 +573,7 @@ class TSimCNE:
                     metric=p.metric,
                     **train_kwargs,
                 )
-            trainer = pl.Trainer(
+            trainer = lightning.Trainer(
                 max_epochs=n_epochs,
                 devices=self.devices,
                 **self.trainer_kwargs,
@@ -563,7 +608,7 @@ class TSimCNE:
             high-dimensional features of the backbone.
         """
         loader = self.make_dataloader(X, False, data_transform)
-        trainer = pl.Trainer(devices=1)
+        trainer = lightning.Trainer(devices=1)
         pred_batches = trainer.predict(self.plmodel, loader)
         Y = torch.vstack([x[0] for x in pred_batches]).numpy()
         backbone_features = torch.vstack([x[1] for x in pred_batches])
@@ -618,12 +663,16 @@ class TSimCNE:
     def make_dataloader(self, X, train_or_test, data_transform):
         if self.image_size is None:
             self.image_size = self.get_image_size_from_dataset(X)
-        
+
         if data_transform is None:
-            if self.data_transform == "is_included": # Keep "is_included" status if that was set prior and no data_transform was passed
+            if (
+                self.data_transform == "is_included"
+            ):  # Keep "is_included" status if that was set prior and no data_transform was passed
                 data_transform = self.data_transform
             else:
-                data_transform = self.get_data_transform(train_or_test, self.image_size, self.use_ffcv)
+                data_transform = self.get_data_transform(
+                    train_or_test, self.image_size, self.use_ffcv
+                )
 
         if not self.use_ffcv:
             if data_transform != "is_included":
