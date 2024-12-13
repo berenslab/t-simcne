@@ -8,6 +8,7 @@ import PIL
 import torch
 from annoy import AnnoyIndex
 from lightning.pytorch.core.mixins import HyperparametersMixin
+from scipy import stats
 from sklearn.model_selection import train_test_split
 
 from .imagedistortions import (
