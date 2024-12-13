@@ -83,7 +83,11 @@ class InfoNCECauchy(nn.Module):
         raw_uniformity = logsumexp_1 + logsumexp_2
 
         loss = -(self.exaggeration * tempered_alignment - raw_uniformity / 2)
-        return loss
+        return dict(
+            loss=loss,
+            ta=-tempered_alignment,
+            ru=raw_uniformity / 2,
+        )
 
 
 class InfoNCEGaussian(InfoNCECauchy):
@@ -111,7 +115,11 @@ class InfoNCEGaussian(InfoNCECauchy):
         raw_uniformity = logsumexp_1 + logsumexp_2
 
         loss = -(tempered_alignment - raw_uniformity / 2)
-        return loss
+        return dict(
+            loss=loss,
+            ta=-tempered_alignment,
+            ru=raw_uniformity / 2,
+        )
 
 
 class InfoNCELoss(LossBase):
