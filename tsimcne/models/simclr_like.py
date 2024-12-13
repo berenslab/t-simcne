@@ -63,7 +63,7 @@ def make_model(
         return ContrastiveFC(
             backbone=backbone,
             projection_head=projection_head,
-            backbone_dim=backbone_dim,
+            backbone_dim=kwargs["backbone_dim"],
             hidden_dim=hidden_dim,
             out_dim=out_dim,
         )
