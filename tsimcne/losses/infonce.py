@@ -136,7 +136,7 @@ class InfoNCELoss(LossBase):
         self.criterion = self.cls(**self.kwargs)
 
 
-class InfoNCET(InfoNCEZ):
+class InfoNCET(InfoNCEGaussian):
     def __init__(self, dof=None, **kwargs):
         super().__init__(**kwargs)
         self.dof = dof
