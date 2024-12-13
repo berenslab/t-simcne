@@ -357,7 +357,7 @@ class PLtSimCNE(lightning.LightningModule, HyperparametersMixin):
             # backbone_features are unused in infonce loss
             loss = self.loss(features)
 
-            return loss
+            return dict(loss=loss)
 
         elif dataloader_idx == 1:
             features, backbone_features = self(batch)
