@@ -134,3 +134,65 @@ class InfoNCELoss(LossBase):
 
     def compute(self):
         self.criterion = self.cls(**self.kwargs)
+
+
+class InfoNCET(InfoNCEZ):
+    def __init__(self, dof=None, **kwargs):
+        super().__init__(**kwargs)
+        self.dof = dof
+
+    def forward(self, features):
+        batch_size = features.size(0) // 2
+
+        features = features.float()
+        a = features[:batch_size]
+        b = features[batch_size:]
+
+        # sqa = (a**2).sum(1)
+        # sqb = (b**2).sum(1)
+
+        # d_aa = -2 * a @ a.T + sqa + sqa[:, None]
+        # d_bb = -2 * b @ b.T + sqb + sqb[:, None]
+        # iab = -2 * a @ b.T
+        # d_ab = iab + sqa + sqb[:, None]
+        d_aa = torch.cdist(a, a).square()
+        d_bb = torch.cdist(b, b).square()
+        d_ab = torch.cdist(a, b).square()
+
+        if self.dof is None:
+            dof = max(2, features.size(1) // 10)
+        else:
+            dof = self.dof
+
+        # sigma = 1.4142
+        # lognconst = torch.special.gammaln(torch.tensor((dof + 1) / 2)) - (
+        #     torch.tensor(torch.pi * dof).sqrt().log()
+        #     + torch.special.gammaln(torch.tensor(dof / 2))
+        # )
+
+        # log-similarity, student t-kernel
+        sim_aa = (d_aa / (0.5 * dof)).log1p() * (-0.5 * (dof + 1))
+        sim_bb = (d_bb / (0.5 * dof)).log1p() * (-0.5 * (dof + 1))
+        sim_ab = (d_ab / (0.5 * dof)).log1p() * (-0.5 * (dof + 1))
+
+        tempered_alignment = sim_ab.diagonal().mean()
+
+        # exclude self inner product
+        self_mask = torch.eye(batch_size, dtype=bool, device=sim_aa.device)
+        sim_aa.masked_fill_(self_mask, float("-inf"))
+        sim_bb.masked_fill_(self_mask, float("-inf"))
+
+        logsumexp_1 = torch.hstack((sim_ab.T, sim_bb)).logsumexp(1).mean()
+        logsumexp_2 = torch.hstack((sim_aa, sim_ab)).logsumexp(1).mean()
+
+        raw_uniformity = logsumexp_1 + logsumexp_2
+
+        loss = -(self.exaggeration * tempered_alignment - raw_uniformity / 2)
+        return dict(
+            loss=loss,
+            # left=sqa.mean(),
+            # inner=iab.mean(),
+            # right=sqb.mean(),
+            ta=-tempered_alignment,
+            ru=raw_uniformity / 2,
+        )
