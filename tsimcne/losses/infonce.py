@@ -50,7 +50,11 @@ class InfoNCECosine(nn.Module):
         raw_uniformity = logsumexp_1 + logsumexp_2
 
         loss = -(tempered_alignment - raw_uniformity / 2) + penalty
-        return loss
+        return dict(
+            loss=loss,
+            ta=-tempered_alignment,
+            ru=raw_uniformity / 2,
+        )
 
 
 class InfoNCECauchy(nn.Module):
