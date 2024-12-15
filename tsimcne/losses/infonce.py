@@ -89,28 +89,6 @@ class InfoNCEGaussian(InfoNCECauchy):
         )
 
 
-class InfoNCELoss(LossBase):
-    def __init__(self, path, **kwargs):
-        super().__init__(path, **kwargs)
-
-        metric = self.metric
-        if metric == "cosine":
-            self.cls = InfoNCECosine
-        elif metric == "euclidean":  # actually Cauchy
-            self.cls = InfoNCECauchy
-        elif metric == "gauss":
-            self.cls = InfoNCEGaussian
-        else:
-            raise ValueError(f"Unknown {metric = !r} for InfoNCE loss")
-
-    def get_deps(self):
-        supdeps = super().get_deps()
-        return [inspect.getfile(self.cls)] + supdeps
-
-    def compute(self):
-        self.criterion = self.cls(**self.kwargs)
-
-
 class InfoNCET(InfoNCEGaussian):
     def __init__(self, dof=None, temperature=1, **kwargs):
         super().__init__(**kwargs)
