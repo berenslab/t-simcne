@@ -3,8 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
 
-from ..base import ProjectBase
-
 
 def make_model(
     backbone,
@@ -81,26 +79,6 @@ def make_projection_head(name="mlp", in_dim=512, hidden_dim=1024, out_dim=128):
     return FCNetwork(
         in_dim=in_dim, feat_dim=out_dim, hidden_dim=hidden_dim, arch=name
     )
-
-
-class SimCLRModel(ProjectBase):
-    def __init__(self, path, random_state=None, **kwargs):
-        super().__init__(path, random_state=random_state)
-        self.kwargs = kwargs
-
-    def get_deps(self):
-        return []
-
-    def load(self):
-        pass
-
-    def compute(self):
-        self.torch_seed = self.random_state.integers(2**64 - 1, dtype="uint")
-        self.model = make_model(**self.kwargs, seed=self.torch_seed)
-
-    def save(self):
-        save_data = dict(model=self.model, model_sd=self.model.state_dict())
-        self.save_lambda_alt(self.outdir / "model.pt", save_data, torch.save)
 
 
 class ContrastiveFC(nn.Module):
