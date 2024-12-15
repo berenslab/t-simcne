@@ -57,43 +57,6 @@ class InfoNCECosine(nn.Module):
         )
 
 
-class InfoNCECauchy(nn.Module):
-    def __init__(self, temperature: float = 1, exaggeration: float = 1):
-        super().__init__()
-        self.temperature = temperature
-        self.exaggeration = exaggeration
-
-    def forward(self, features, backbone_features=None, labels=None):
-        # backbone_features and labels are unused
-        batch_size = features.size(0) // 2
-
-        a = features[:batch_size]
-        b = features[batch_size:]
-
-        sim_aa = 1 / (torch.cdist(a, a) * self.temperature).square().add(1)
-        sim_bb = 1 / (torch.cdist(b, b) * self.temperature).square().add(1)
-        sim_ab = 1 / (torch.cdist(a, b) * self.temperature).square().add(1)
-
-        tempered_alignment = torch.diagonal(sim_ab).log().mean()
-
-        # exclude self inner product
-        self_mask = torch.eye(batch_size, dtype=bool, device=sim_aa.device)
-        sim_aa.masked_fill_(self_mask, 0.0)
-        sim_bb.masked_fill_(self_mask, 0.0)
-
-        logsumexp_1 = torch.hstack((sim_ab.T, sim_bb)).sum(1).log_().mean()
-        logsumexp_2 = torch.hstack((sim_aa, sim_ab)).sum(1).log_().mean()
-
-        raw_uniformity = logsumexp_1 + logsumexp_2
-
-        loss = -(self.exaggeration * tempered_alignment - raw_uniformity / 2)
-        return dict(
-            loss=loss,
-            ta=-tempered_alignment,
-            ru=raw_uniformity / 2,
-        )
-
-
 class InfoNCEGaussian(InfoNCECauchy):
     def forward(self, features, backbone_features=None, labels=None):
         # backbone_features and labels are unused
@@ -196,3 +159,8 @@ class InfoNCET(InfoNCEGaussian):
             ta=-tempered_alignment,
             ru=raw_uniformity / 2,
         )
+
+
+class InfoNCECauchy(InfoNCET):
+    def __init__(self, temperature: float = 1):
+        super().__init__(dof=1, temperature=temperature)
