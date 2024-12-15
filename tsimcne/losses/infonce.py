@@ -57,7 +57,11 @@ class InfoNCECosine(nn.Module):
         )
 
 
-class InfoNCEGaussian(InfoNCECauchy):
+class InfoNCEGaussian(nn.Module):
+    def __init__(self, temperature=1):
+        super().__init__()
+        self.temperature = temperature
+
     def forward(self, features, backbone_features=None, labels=None):
         # backbone_features and labels are unused
         batch_size = features.size(0) // 2
@@ -90,10 +94,9 @@ class InfoNCEGaussian(InfoNCECauchy):
 
 
 class InfoNCET(InfoNCEGaussian):
-    def __init__(self, dof=None, temperature=1, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, dof=None, temperature=1):
+        super().__init__(temperature=temperature)
         self.dof = dof
-        self.temperature = temperature
 
     def forward(self, features):
         batch_size = features.size(0) // 2
