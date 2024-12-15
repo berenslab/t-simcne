@@ -1,10 +1,6 @@
-import inspect
-
 import torch
 import torch.nn.functional as F
 from torch import nn
-
-from .base import LossBase
 
 
 class InfoNCECosine(nn.Module):
