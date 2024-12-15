@@ -149,9 +149,10 @@ class InfoNCELoss(LossBase):
 
 
 class InfoNCET(InfoNCEGaussian):
-    def __init__(self, dof=None, **kwargs):
+    def __init__(self, dof=None, temperature=1, **kwargs):
         super().__init__(**kwargs)
         self.dof = dof
+        self.temperature = temperature
 
     def forward(self, features):
         batch_size = features.size(0) // 2
@@ -160,27 +161,14 @@ class InfoNCET(InfoNCEGaussian):
         a = features[:batch_size]
         b = features[batch_size:]
 
-        # sqa = (a**2).sum(1)
-        # sqb = (b**2).sum(1)
-
-        # d_aa = -2 * a @ a.T + sqa + sqa[:, None]
-        # d_bb = -2 * b @ b.T + sqb + sqb[:, None]
-        # iab = -2 * a @ b.T
-        # d_ab = iab + sqa + sqb[:, None]
-        d_aa = torch.cdist(a, a).square()
-        d_bb = torch.cdist(b, b).square()
-        d_ab = torch.cdist(a, b).square()
+        d_aa = torch.cdist(a, a).square() * self.temperature
+        d_bb = torch.cdist(b, b).square() * self.temperature
+        d_ab = torch.cdist(a, b).square() * self.temperature
 
         if self.dof is None:
             dof = max(2, features.size(1) // 10)
         else:
             dof = self.dof
-
-        # sigma = 1.4142
-        # lognconst = torch.special.gammaln(torch.tensor((dof + 1) / 2)) - (
-        #     torch.tensor(torch.pi * dof).sqrt().log()
-        #     + torch.special.gammaln(torch.tensor(dof / 2))
-        # )
 
         # log-similarity, student t-kernel
         sim_aa = (d_aa / (0.5 * dof)).log1p() * (-0.5 * (dof + 1))
