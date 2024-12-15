@@ -127,12 +127,9 @@ class InfoNCET(InfoNCEGaussian):
 
         raw_uniformity = logsumexp_1 + logsumexp_2
 
-        loss = -(self.exaggeration * tempered_alignment - raw_uniformity / 2)
+        loss = -(tempered_alignment - raw_uniformity / 2)
         return dict(
             loss=loss,
-            # left=sqa.mean(),
-            # inner=iab.mean(),
-            # right=sqb.mean(),
             ta=-tempered_alignment,
             ru=raw_uniformity / 2,
         )
