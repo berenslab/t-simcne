@@ -386,7 +386,7 @@ def efficientnet_v2_l(**kwargs):
 
 model_dict = {
     "resnet18": [pytorch_resnet, 512],
-    "resnet18_simclr": [resnet18, 512],
+    "resnet18_sm_kernel": [resnet18, 512],
     "resnet34": [resnet34, 512],
     "resnet50": [resnet50, 2048],
     "resnet101": [resnet101, 2048],
