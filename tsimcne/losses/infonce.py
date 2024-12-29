@@ -4,16 +4,9 @@ from torch import nn
 
 
 class InfoNCECosine(nn.Module):
-    def __init__(
-        self,
-        temperature: float = 0.5,
-        reg_coef: float = 0,
-        reg_radius: float = 200,
-    ):
+    def __init__(self, temperature: float = 0.5):
         super().__init__()
         self.temperature = temperature
-        self.reg_coef = reg_coef
-        self.reg_radius = reg_radius
 
     def forward(self, features, backbone_features=None, labels=None):
         # backbone_features and labels are unused
@@ -21,11 +14,6 @@ class InfoNCECosine(nn.Module):
 
         a = features[:batch_size]
         b = features[batch_size:]
-
-        # mean deviation from the sphere with radius `reg_radius`
-        vecnorms = torch.linalg.vector_norm(features, dim=1)
-        target = torch.full_like(vecnorms, self.reg_radius)
-        penalty = self.reg_coef * F.mse_loss(vecnorms, target)
 
         a = F.normalize(a)
         b = F.normalize(b)
@@ -45,7 +33,7 @@ class InfoNCECosine(nn.Module):
         logsumexp_2 = torch.hstack((cos_aa, cos_ab)).logsumexp(dim=1).mean()
         raw_uniformity = logsumexp_1 + logsumexp_2
 
-        loss = -(tempered_alignment - raw_uniformity / 2) + penalty
+        loss = -(tempered_alignment - raw_uniformity / 2)
         return dict(
             loss=loss,
             ta=-tempered_alignment,
