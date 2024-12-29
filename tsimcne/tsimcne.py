@@ -15,7 +15,13 @@ from .imagedistortions import (
     TransformedPairDataset,
     get_transforms_unnormalized,
 )
-from .losses.infonce import InfoNCECauchy, InfoNCECosine, InfoNCEGaussian
+from .losses.infonce import (
+    CauchyTemp,
+    CosineTemp,
+    InfoNCECauchy,
+    InfoNCECosine,
+    InfoNCEGaussian,
+)
 from .lrschedule import (
     ConstantSchedule,
     CosineAnnealingSchedule,
@@ -114,6 +120,19 @@ class PLtSimCNE(lightning.LightningModule, HyperparametersMixin):
                 raise ValueError(
                     f"Unknown {self.metric = !r} for InfoNCE loss"
                 )
+        elif self.loss == "infonce-temp":
+            if self.metric is None:
+                self.metric = "euclidean"
+
+            if self.metric == "euclidean":
+                self.loss = CauchyTemp(temperature=self.temperature)
+            elif self.metric == "cosine":
+                self.loss = CosineTemp(temperature=self.temperature)
+            else:
+                raise ValueError(
+                    f"Unknown {self.metric = !r} for InfoNCE loss"
+                )
+
         # else: assume that the loss is a proper pytorch loss function
 
         if self.lr == "auto_batch" and self.optimizer_name == "sgd":
