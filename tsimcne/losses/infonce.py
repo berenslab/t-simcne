@@ -126,3 +126,29 @@ class InfoNCET(InfoNCEGaussian):
 class InfoNCECauchy(InfoNCET):
     def __init__(self, temperature: float = 1):
         super().__init__(dof=1, temperature=temperature)
+
+
+class CauchyTemp(InfoNCECauchy):
+    def __init__(self, temperature: float = 1.0):
+        super().__init__(temperature=temperature)
+
+        self.logtemp = torch.nn.Parameter(torch.tensor(self.temperature).log())
+
+    def __call__(self, features):
+        self.temperature = self.logtemp.exp()
+        lossdict = super().__call__(features)
+        lossdict.update(logtemp=self.logtemp.item())
+        return lossdict
+
+
+class CosineTemp(InfoNCECosine):
+    def __init__(self, temperature: float = 0.5):
+        super().__init__(temperature=temperature)
+
+        self.logtemp = torch.nn.Parameter(torch.tensor(self.temperature).log())
+
+    def __call__(self, features):
+        self.temperature = self.logtemp.exp()
+        lossdict = super().__call__(features)
+        lossdict.update(logtemp=self.logtemp.item())
+        return lossdict
