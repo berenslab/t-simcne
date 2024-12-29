@@ -135,7 +135,7 @@ class ResNetFC(nn.Module):
 
         self.projection_head = make_projection_head(
             projection_head,
-            in_dim=backbone_dim,
+            in_dim=self.backbone_dim,
             hidden_dim=hidden_dim,
             out_dim=out_dim,
         )
