@@ -113,16 +113,23 @@ class ResNetFC(nn.Module):
         in_channel=3,
         out_dim=128,
         hidden_dim=1024,
+        backbone_dim=None,
     ):
         super(ResNetFC, self).__init__()
         try:
-            model_func, backbone_dim = model_dict[backbone]
+            model_func, _backbone_dim = model_dict[backbone]
         except KeyError:
             raise ValueError(
-                f"{backbone = !r} not registered in model_dict."
+                f"{backbone=!r} not registered in model_dict."
                 f"  Available backbones are {model_dict.keys()}"
             )
-        self.backbone_dim = backbone_dim
+        if backbone_dim is not None:
+            if backbone_dim != _backbone_dim:
+                raise ValueError(
+                    f"Expected passed {backbone_dim=!r} to match the "
+                    f"one found in the model dict, but got {_backbone_dim}."
+                )
+        self.backbone_dim = _backbone_dim
         self.out_dim = out_dim
         self.backbone = model_func(in_channel=in_channel)
 
