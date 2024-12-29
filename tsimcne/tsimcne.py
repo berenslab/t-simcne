@@ -244,26 +244,48 @@ class PLtSimCNE(lightning.LightningModule, HyperparametersMixin):
     def configure_optimizers(self):
         if self.optimizer_name == "sgd":
             opt = torch.optim.SGD(
-                self.parameters(),
+                self.model.parameters(),
                 lr=self.lr,
                 momentum=self.momentum,
                 weight_decay=self.weight_decay,
             )
+            opt_loss = torch.optim.SGD(
+                self.loss.parameters(),
+                lr=self.lr / 100,
+                momentum=self.momentum,
+                weight_decay=self.weight_decay,
+            )
+            opts = [opt, opt_loss]
         elif self.optimizer_name == "adam":
             opt = torch.optim.Adam(
-                self.parameters(),
+                self.model.parameters(),
                 lr=self.lr,
                 weight_decay=self.weight_decay,
                 amsgrad=True,
             )
+            opt_loss = torch.optim.Adam(
+                self.loss.parameters(),
+                lr=self.lr / 100,
+                weight_decay=self.weight_decay,
+                amsgrad=True,
+            )
+            opts = [opt, opt_loss]
         elif self.optimizer_name == "adamw":
             opt = torch.optim.AdamW(
-                self.parameters(),
+                self.model.parameters(),
                 lr=self.lr,
                 weight_decay=self.weight_decay,
                 amsgrad=False,
                 eps=1e-6,
             )
+            opt_loss = torch.optim.AdamW(
+                self.loss.parameters(),
+                lr=self.lr / 100,
+                weight_decay=self.weight_decay,
+                amsgrad=False,
+                eps=1e-6,
+            )
+            opts = [opt, opt_loss]
 
         effective_n_epochs = (
             self.n_epochs
@@ -277,38 +299,47 @@ class PLtSimCNE(lightning.LightningModule, HyperparametersMixin):
         )
         match self.lr_scheduler_name:
             case "cos_annealing":
-                lrsched = CosineAnnealingSchedule(
-                    opt,
-                    n_epochs=effective_n_epochs,
-                    warmup_epochs=effective_warmup_epochs,
-                )
+                lrs = [
+                    CosineAnnealingSchedule(
+                        opt,
+                        n_epochs=effective_n_epochs,
+                        warmup_epochs=effective_warmup_epochs,
+                    )
+                    for opt in opts
+                ]
             case "constant":
-                lrsched = ConstantSchedule(
-                    opt,
-                    n_epochs=effective_n_epochs,
-                    warmup_epochs=effective_warmup_epochs,
-                )
+                lrs = [
+                    ConstantSchedule(
+                        opt,
+                        n_epochs=effective_n_epochs,
+                        warmup_epochs=effective_warmup_epochs,
+                    )
+                    for opt in ops
+                ]
             case "linear":
-                lrsched = LinearSchedule(
-                    opt,
-                    n_epochs=effective_n_epochs,
-                    warmup_epochs=effective_warmup_epochs,
-                )
+                lrs = [
+                    LinearSchedule(
+                        opt,
+                        n_epochs=effective_n_epochs,
+                        warmup_epochs=effective_warmup_epochs,
+                    )
+                    for opt in opts
+                ]
             case _:
                 raise ValueError(
                     "Expected 'cos_annealing', 'constant', or 'linear', got "
                     f"{self.lr_scheduler_name=!r}"
                 )
 
-        return {
-            "optimizer": opt,
-            "lr_scheduler": {
+        return opts, [
+            {
                 "scheduler": lrsched,
                 "interval": (
                     "epoch" if self.batches_per_epoch is None else "step"
                 ),
-            },  # interval "step" for batch update
-        }
+            }
+            for lrsched in lrs
+        ]
 
     def on_train_epoch_start(self):
         if hasattr(self, "dof_"):
