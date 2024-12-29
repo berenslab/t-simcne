@@ -261,64 +261,31 @@ class PLtSimCNE(lightning.LightningModule, HyperparametersMixin):
             self.rng = self.random_state
 
     def configure_optimizers(self):
-        opts = []
+        params = [dict(params=self.model.parameters())]
+        if sum(p.numel() for p in self.loss.parameters()) > 0:
+            params += [dict(params=self.loss.parameters, lr=self.lr / 100)]
         if self.optimizer_name == "sgd":
-            opts.append(
-                torch.optim.SGD(
-                    self.model.parameters(),
-                    lr=self.lr,
-                    momentum=self.momentum,
-                    weight_decay=self.weight_decay,
-                )
+            opt = torch.optim.SGD(
+                params,
+                lr=self.lr,
+                momentum=self.momentum,
+                weight_decay=self.weight_decay,
             )
-            if sum(p.numel() for p in self.loss.parameters()) > 0:
-                opts.append(
-                    torch.optim.SGD(
-                        self.loss.parameters(),
-                        lr=self.lr / 100,
-                        momentum=self.momentum,
-                        weight_decay=self.weight_decay,
-                    )
-                )
         elif self.optimizer_name == "adam":
-            opts.append(
-                torch.optim.Adam(
-                    self.model.parameters(),
-                    lr=self.lr,
-                    weight_decay=self.weight_decay,
-                    amsgrad=True,
-                )
+            opt = torch.optim.Adam(
+                params,
+                lr=self.lr,
+                weight_decay=self.weight_decay,
+                amsgrad=True,
             )
-            if sum(p.numel() for p in self.loss.parameters()) > 0:
-                opts.append(
-                    torch.optim.Adam(
-                        self.loss.parameters(),
-                        lr=self.lr / 100,
-                        weight_decay=self.weight_decay,
-                        amsgrad=True,
-                    )
-                )
         elif self.optimizer_name == "adamw":
-            opts.append(
-                torch.optim.AdamW(
-                    self.model.parameters(),
-                    lr=self.lr,
-                    weight_decay=self.weight_decay,
-                    amsgrad=False,
-                    eps=1e-6,
-                )
+            opt = torch.optim.AdamW(
+                params,
+                lr=self.lr,
+                weight_decay=self.weight_decay,
+                amsgrad=False,
+                eps=1e-6,
             )
-            if sum(p.numel() for p in self.loss.parameters()) > 0:
-                opts.append(
-                    torch.optim.AdamW(
-                        self.loss.parameters(),
-                        lr=self.lr / 100,
-                        weight_decay=self.weight_decay,
-                        amsgrad=False,
-                        eps=1e-6,
-                    )
-                )
-
         effective_n_epochs = (
             self.n_epochs
             if self.batches_per_epoch is None
@@ -331,47 +298,39 @@ class PLtSimCNE(lightning.LightningModule, HyperparametersMixin):
         )
         match self.lr_scheduler_name:
             case "cos_annealing":
-                lrs = [
-                    CosineAnnealingSchedule(
-                        opt,
-                        n_epochs=effective_n_epochs,
-                        warmup_epochs=effective_warmup_epochs,
-                    )
-                    for opt in opts
-                ]
+                lrsched = CosineAnnealingSchedule(
+                    opt,
+                    n_epochs=effective_n_epochs,
+                    warmup_epochs=effective_warmup_epochs,
+                )
             case "constant":
-                lrs = [
-                    ConstantSchedule(
-                        opt,
-                        n_epochs=effective_n_epochs,
-                        warmup_epochs=effective_warmup_epochs,
-                    )
-                    for opt in ops
-                ]
+                lrsched = ConstantSchedule(
+                    opt,
+                    n_epochs=effective_n_epochs,
+                    warmup_epochs=effective_warmup_epochs,
+                )
+
             case "linear":
-                lrs = [
-                    LinearSchedule(
-                        opt,
-                        n_epochs=effective_n_epochs,
-                        warmup_epochs=effective_warmup_epochs,
-                    )
-                    for opt in opts
-                ]
+                lrsched = LinearSchedule(
+                    opt,
+                    n_epochs=effective_n_epochs,
+                    warmup_epochs=effective_warmup_epochs,
+                )
             case _:
                 raise ValueError(
                     "Expected 'cos_annealing', 'constant', or 'linear', got "
                     f"{self.lr_scheduler_name=!r}"
                 )
 
-        return opts, [
-            {
+        return {
+            "optimizer": opt,
+            "lr_scheduler": {
                 "scheduler": lrsched,
                 "interval": (
                     "epoch" if self.batches_per_epoch is None else "step"
                 ),
-            }
-            for lrsched in lrs
-        ]
+            },
+        }
 
     def on_train_epoch_start(self):
         if hasattr(self, "dof_"):
