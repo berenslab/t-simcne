@@ -242,50 +242,63 @@ class PLtSimCNE(lightning.LightningModule, HyperparametersMixin):
             self.rng = self.random_state
 
     def configure_optimizers(self):
+        opts = []
         if self.optimizer_name == "sgd":
-            opt = torch.optim.SGD(
-                self.model.parameters(),
-                lr=self.lr,
-                momentum=self.momentum,
-                weight_decay=self.weight_decay,
+            opts.append(
+                torch.optim.SGD(
+                    self.model.parameters(),
+                    lr=self.lr,
+                    momentum=self.momentum,
+                    weight_decay=self.weight_decay,
+                )
             )
-            opt_loss = torch.optim.SGD(
-                self.loss.parameters(),
-                lr=self.lr / 100,
-                momentum=self.momentum,
-                weight_decay=self.weight_decay,
-            )
-            opts = [opt, opt_loss]
+            if sum(p.numel() for p in self.loss.parameters()) > 0:
+                opts.append(
+                    torch.optim.SGD(
+                        self.loss.parameters(),
+                        lr=self.lr / 100,
+                        momentum=self.momentum,
+                        weight_decay=self.weight_decay,
+                    )
+                )
         elif self.optimizer_name == "adam":
-            opt = torch.optim.Adam(
-                self.model.parameters(),
-                lr=self.lr,
-                weight_decay=self.weight_decay,
-                amsgrad=True,
+            opts.append(
+                torch.optim.Adam(
+                    self.model.parameters(),
+                    lr=self.lr,
+                    weight_decay=self.weight_decay,
+                    amsgrad=True,
+                )
             )
-            opt_loss = torch.optim.Adam(
-                self.loss.parameters(),
-                lr=self.lr / 100,
-                weight_decay=self.weight_decay,
-                amsgrad=True,
-            )
-            opts = [opt, opt_loss]
+            if sum(p.numel() for p in self.loss.parameters()) > 0:
+                opts.append(
+                    torch.optim.Adam(
+                        self.loss.parameters(),
+                        lr=self.lr / 100,
+                        weight_decay=self.weight_decay,
+                        amsgrad=True,
+                    )
+                )
         elif self.optimizer_name == "adamw":
-            opt = torch.optim.AdamW(
-                self.model.parameters(),
-                lr=self.lr,
-                weight_decay=self.weight_decay,
-                amsgrad=False,
-                eps=1e-6,
+            opts.append(
+                torch.optim.AdamW(
+                    self.model.parameters(),
+                    lr=self.lr,
+                    weight_decay=self.weight_decay,
+                    amsgrad=False,
+                    eps=1e-6,
+                )
             )
-            opt_loss = torch.optim.AdamW(
-                self.loss.parameters(),
-                lr=self.lr / 100,
-                weight_decay=self.weight_decay,
-                amsgrad=False,
-                eps=1e-6,
-            )
-            opts = [opt, opt_loss]
+            if sum(p.numel() for p in self.loss.parameters()) > 0:
+                opts.append(
+                    torch.optim.AdamW(
+                        self.loss.parameters(),
+                        lr=self.lr / 100,
+                        weight_decay=self.weight_decay,
+                        amsgrad=False,
+                        eps=1e-6,
+                    )
+                )
 
         effective_n_epochs = (
             self.n_epochs
