@@ -8,7 +8,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "tSimCNE"
-copyright = "2024, Nik Böhm"
+copyright = "2025, Nik Böhm"
 author = "Nik Böhm"
 release = "0.4.14"
 
