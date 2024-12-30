@@ -263,7 +263,7 @@ class PLtSimCNE(lightning.LightningModule, HyperparametersMixin):
     def configure_optimizers(self):
         params = [dict(params=self.model.parameters())]
         if sum(p.numel() for p in self.loss.parameters()) > 0:
-            params += [dict(params=self.loss.parameters, lr=self.lr / 100)]
+            params += [dict(params=self.loss.parameters(), lr=self.lr / 100)]
         if self.optimizer_name == "sgd":
             opt = torch.optim.SGD(
                 params,
