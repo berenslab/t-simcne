@@ -36,7 +36,6 @@ class PLtSimCNE(lightning.LightningModule, HyperparametersMixin):
         self,
         model=None,
         loss="infonce",
-        loss_name=None,
         metric=None,
         temperature=0.5,
         backbone="resnet18_sm_kernel",
@@ -63,16 +62,15 @@ class PLtSimCNE(lightning.LightningModule, HyperparametersMixin):
     ):
         super().__init__()
         ignore_list = [
-            "loss",
             "backbone",
             "projection_head",
             "eval_function",
             "model",
         ]
+        ignore_list += ["loss"] if not isinstance(loss, str) else []
         self.save_hyperparameters(ignore=ignore_list)
         self.model = model
         self.loss = loss
-        self.loss_name = self.loss if loss_name is None else loss_name
         self.metric = metric
         self.temperature = temperature
         self.backbone = backbone
