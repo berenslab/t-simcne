@@ -10,7 +10,7 @@
 project = "tSimCNE"
 copyright = "2025, Nik Böhm"
 author = "Nik Böhm"
-release = "0.4.17"
+release = "0.4.18"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
