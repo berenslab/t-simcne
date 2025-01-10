@@ -8,7 +8,9 @@ class InfoNCECosine(nn.Module):
         super().__init__()
         self.temperature = temperature
 
-    def forward(self, features, backbone_features=None, labels=None):
+    def forward(
+        self, features, temperature=None, backbone_features=None, labels=None
+    ):
         # backbone_features and labels are unused
         batch_size = features.size(0) // 2
 
@@ -18,9 +20,11 @@ class InfoNCECosine(nn.Module):
         a = F.normalize(a)
         b = F.normalize(b)
 
-        cos_aa = a @ a.T / self.temperature
-        cos_bb = b @ b.T / self.temperature
-        cos_ab = a @ b.T / self.temperature
+        temp = self.temperature if temperature is None else temperature
+
+        cos_aa = a @ a.T / temp
+        cos_bb = b @ b.T / temp
+        cos_ab = a @ b.T / temp
 
         # mean of the diagonal
         tempered_alignment = cos_ab.trace() / batch_size
@@ -82,16 +86,18 @@ class InfoNCET(InfoNCEGaussian):
         super().__init__(temperature=temperature)
         self.dof = dof
 
-    def forward(self, features):
+    def forward(self, features, temperature=None):
         batch_size = features.size(0) // 2
 
         features = features.float()
         a = features[:batch_size]
         b = features[batch_size:]
 
-        d_aa = torch.cdist(a, a).square() * self.temperature
-        d_bb = torch.cdist(b, b).square() * self.temperature
-        d_ab = torch.cdist(a, b).square() * self.temperature
+        temp = self.temperature if temperature is None else temperature
+
+        d_aa = torch.cdist(a, a).square() * temp
+        d_bb = torch.cdist(b, b).square() * temp
+        d_ab = torch.cdist(a, b).square() * temp
 
         if self.dof is None:
             dof = max(2, features.size(1) // 10)
@@ -133,11 +139,11 @@ class CauchyTemp(InfoNCECauchy):
         super().__init__(temperature=temperature)
 
         self.logtemp = torch.nn.Parameter(torch.tensor(self.temperature).log())
+        self.initial_temperature = temperature
 
-    @torch.compiler.disable(recursive=False)
     def __call__(self, features):
         self.temperature = self.logtemp.exp()
-        lossdict = super().__call__(features)
+        lossdict = super().__call__(features, temperature=self.temperature)
         lossdict.update(logtemp=self.logtemp.item())
         return lossdict
 
@@ -147,10 +153,10 @@ class CosineTemp(InfoNCECosine):
         super().__init__(temperature=temperature)
 
         self.logtemp = torch.nn.Parameter(torch.tensor(self.temperature).log())
+        self.initial_temperature = temperature
 
-    @torch.compiler.disable(recursive=False)
     def __call__(self, features):
         self.temperature = self.logtemp.exp()
-        lossdict = super().__call__(features)
+        lossdict = super().__call__(features, temperature=self.temperature)
         lossdict.update(logtemp=self.logtemp.item())
         return lossdict
