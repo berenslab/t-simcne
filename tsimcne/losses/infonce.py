@@ -134,6 +134,7 @@ class CauchyTemp(InfoNCECauchy):
 
         self.logtemp = torch.nn.Parameter(torch.tensor(self.temperature).log())
 
+    @torch.compiler.disable(recursive=False)
     def __call__(self, features):
         self.temperature = self.logtemp.exp()
         lossdict = super().__call__(features)
@@ -147,6 +148,7 @@ class CosineTemp(InfoNCECosine):
 
         self.logtemp = torch.nn.Parameter(torch.tensor(self.temperature).log())
 
+    @torch.compiler.disable(recursive=False)
     def __call__(self, features):
         self.temperature = self.logtemp.exp()
         lossdict = super().__call__(features)
