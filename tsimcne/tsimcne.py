@@ -707,7 +707,6 @@ class TSimCNE:
         num_workers=8,
         dl_kwargs=None,
         float32_matmul_precision="medium",
-        use_ffcv=False,
     ):
         self.model = model
         self.loss = loss
@@ -730,7 +729,6 @@ class TSimCNE:
         self.num_workers = num_workers
         self.dl_kwargs = dict() if dl_kwargs is None else dl_kwargs
         self.float32_matmul_precision = float32_matmul_precision
-        self.use_ffcv = use_ffcv
 
         self._handle_parameters()
 
@@ -807,24 +805,6 @@ class TSimCNE:
         else:
             self.trainer_kwargs = trainer_kwargs.update(self.trainer_kwargs)
 
-    @staticmethod
-    def check_ffcv(use_ffcv):
-        if use_ffcv:
-            try:
-                import ffcv
-
-                ffcv.transforms.RandomGrayscale
-            except ModuleNotFoundError:
-                raise ValueError(
-                    "`use_ffcv` is not False, but `ffcv` is not installed. "
-                    "Install https://github.com/facebookresearch/FFCV-SSL"
-                )
-            except AttributeError:
-                raise ValueError(
-                    "`use_ffcv` is True, but wrong ffcv library is installed. "
-                    "Install https://github.com/facebookresearch/FFCV-SSL"
-                )
-
     def fit_transform(
         self,
         X: torch.utils.data.Dataset | str,
@@ -869,13 +849,6 @@ class TSimCNE:
 
         """
 
-        if self.use_ffcv == "auto":
-            if isinstance(X, (str, Path)):
-                self.use_ffcv = True
-            else:
-                self.use_ffcv = False
-        self.check_ffcv(self.use_ffcv)
-
         train_dl = self.make_dataloader(X, True, self.data_transform)
 
         self.loader = train_dl
@@ -892,9 +865,7 @@ class TSimCNE:
                 lr_scheduler_name=self.lr_scheduler,
                 lr=lr,
                 warmup=warmup_epochs,
-                pretrain_out_dim=self.pretrain_out_dim,
                 out_dim=self.out_dim,
-                use_ffcv=self.use_ffcv,
             )
             if n_stage == 0:
                 # initialize the model
@@ -953,9 +924,7 @@ class TSimCNE:
     ):
         """Perform the 2D transform on the dataset, using the trained model.
         :param X: The image dataset to be used for transformation.  Will be
-            wrapped into a data loader automatically.  If
-            ``use_ffcv=True``, then it needs to be a string pointing
-            to the .beton file.
+            wrapped into a data loader automatically.
         :param data_transform: the data transformation to use for
             calculating the final 2D embedding.  By default it will
             not perform any data augmentation (as this is only
