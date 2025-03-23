@@ -1001,7 +1001,7 @@ class TSimCNE:
                     train_or_test, self.image_size, self.use_ffcv
                 )
 
-        if not self.use_ffcv:
+        if True:
             if data_transform != "is_included":
                 # dataset that returns two augmented views of a given
                 # datapoint (and label)
