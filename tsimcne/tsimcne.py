@@ -707,6 +707,7 @@ class TSimCNE:
         num_workers=8,
         dl_kwargs=None,
         float32_matmul_precision="medium",
+        use_ffcv=False,
     ):
         self.model = model
         self.loss = loss
@@ -729,6 +730,7 @@ class TSimCNE:
         self.num_workers = num_workers
         self.dl_kwargs = dict() if dl_kwargs is None else dl_kwargs
         self.float32_matmul_precision = float32_matmul_precision
+        self.use_ffcv = use_ffcv
 
         self._handle_parameters()
 
