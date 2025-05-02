@@ -215,7 +215,7 @@ class PLtSimCNE(lightning.LightningModule, HyperparametersMixin):
 
             case "parameter":
                 self.dof_ = torch.nn.Parameter(
-                    torch.tensor(1.0, dtype=torch.float64)
+                    torch.tensor(1.0, dtype=torch.float32)
                 )
                 self.dofs = [self.dof_] * self.n_epochs
 
@@ -706,6 +706,7 @@ class TSimCNE:
         trainer_kwargs=None,
         num_workers=8,
         dl_kwargs=None,
+        use_ffcv=False,
         float32_matmul_precision="medium",
     ):
         self.model = model
@@ -729,6 +730,7 @@ class TSimCNE:
         self.num_workers = num_workers
         self.dl_kwargs = dict() if dl_kwargs is None else dl_kwargs
         self.float32_matmul_precision = float32_matmul_precision
+        self.use_ffcv = use_ffcv
 
         self._handle_parameters()
 
@@ -864,7 +866,7 @@ class TSimCNE:
                 optimizer_name=self.optimizer,
                 lr_scheduler_name=self.lr_scheduler,
                 lr=lr,
-                warmup=warmup_epochs,
+                warmup_epochs=warmup_epochs,
                 out_dim=self.out_dim,
             )
             if n_stage == 0:

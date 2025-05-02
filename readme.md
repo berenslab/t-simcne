@@ -47,6 +47,7 @@ import torch
 import torchvision
 from matplotlib import pyplot as plt
 from tsimcne.tsimcne import TSimCNE
+from torchvision import transforms
 
 # get the cifar dataset (make sure to adapt `data_root` to point to your folder)
 data_root = "experiments/cifar/out/cifar10"
@@ -54,19 +55,24 @@ dataset_train = torchvision.datasets.CIFAR10(
     root=data_root,
     download=True,
     train=True,
+    transform=transforms.ToTensor()  # Convert PIL images to tensors
 )
 dataset_test = torchvision.datasets.CIFAR10(
     root=data_root,
     download=True,
     train=False,
+    transform=transforms.ToTensor()  # Convert PIL images to tensors
 )
 dataset_full = torch.utils.data.ConcatDataset([dataset_train, dataset_test])
 
-# create the object (here we run t-SimCNE with fewer epochs
-# than in the paper; there we used [1000, 50, 450]).
-tsimcne = TSimCNE(total_epochs=[500, 50, 250])
+# create the object with explicit image size and data transform
+tsimcne = TSimCNE(
+    total_epochs=[500, 50, 250],
+    image_size=(32, 32),  # CIFAR10 images are 32x32
+    data_transform="is_included"  # Tell TSimCNE that the data is already transformed
+)
 
-# train on the augmented/contrastive dataloader (this takes the most time)
+# train on the augmented/contrastive dataloader
 tsimcne.fit(dataset_full)
 
 # map the original images to 2D
