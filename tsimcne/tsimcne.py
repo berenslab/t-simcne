@@ -6,7 +6,6 @@ import lightning
 import numpy as np
 import PIL
 import torch
-from annoy import AnnoyIndex
 from lightning.pytorch.core.mixins import HyperparametersMixin
 from scipy import stats
 from sklearn.model_selection import train_test_split
@@ -514,6 +513,8 @@ class AnnoyClassifier:
             self.seed = self.random_state.integers(-(2**31), 2**31)
 
     def fit(self, X, y):
+        from annoy import AnnoyIndex
+
         self.y = y
 
         metric = self.metric if self.metric != "cosine" else "angular"

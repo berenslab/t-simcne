@@ -10,7 +10,6 @@ dependencies = [
     "torchvision~=0.19",
     "lightning>=2.4",
     "numpy>=1.24.0",
-    "annoy>=1.17.2",
     "scipy>=1.0.0",
     "scikit-learn>=1.0.0",
     "pillow",
@@ -23,6 +22,8 @@ readme = "readme.md"
 homepage = "https://github.com/berenslab/t-simcne"
 documentation = "https://t-simcne.readthedocs.io/en/latest"
 
+[project.optional-dependencies]
+annoy = ["annoy>=1.17.2"]
 
 [tool]
 [tool.pdm]
